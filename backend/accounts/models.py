@@ -39,3 +39,50 @@ class User(AbstractUser):
 
     def __str__(self):
         return f"{self.email} ({self.get_full_name()})"
+
+
+class ConsentLog(models.Model):
+    """Model to track user consent for various policies and terms"""
+
+    user = models.ForeignKey(
+        'User',
+        on_delete=models.CASCADE,
+        related_name='consent_logs',
+        verbose_name='User'
+    )
+
+    policy_version = models.CharField(
+        max_length=50,
+        verbose_name='Policy Version',
+        help_text='Version of the policy/terms that was consented to'
+    )
+
+    consent_at = models.DateTimeField(
+        auto_now_add=True,
+        verbose_name='Consent Timestamp',
+        help_text='When the user gave consent'
+    )
+
+    ip_address = models.GenericIPAddressField(
+        blank=True,
+        null=True,
+        verbose_name='IP Address',
+        help_text='IP address from which consent was given'
+    )
+
+    user_agent = models.TextField(
+        blank=True,
+        null=True,
+        verbose_name='User Agent',
+        help_text='Browser/client information when consent was given'
+    )
+
+    class Meta:
+        verbose_name = 'Consent Log'
+        verbose_name_plural = 'Consent Logs'
+        ordering = ['-consent_at']
+        # Prevent duplicate consent logs for same user and policy version
+        unique_together = ['user', 'policy_version']
+
+    def __str__(self):
+        return f"{self.user.email} - {self.policy_version} ({self.consent_at})"
