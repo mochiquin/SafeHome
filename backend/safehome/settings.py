@@ -17,7 +17,7 @@ import os
 # Import custom logging configuration and middleware
 from .logging import LOGGING
 from core.middleware import RequestLoggingMiddleware, ErrorHandlingMiddleware, custom_exception_handler
-from accounts.authentication import JWTCookieAuthentication
+# from accounts.authentication import JWTCookieAuthentication  # Temporarily commented out
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -165,7 +165,6 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 REST_FRAMEWORK = {
     'DEFAULT_SCHEMA_CLASS': 'drf_spectacular.openapi.AutoSchema',
     'DEFAULT_AUTHENTICATION_CLASSES': [
-        'accounts.authentication.JWTCookieAuthentication',
         'rest_framework_simplejwt.authentication.JWTAuthentication',
     ],
     'DEFAULT_PERMISSION_CLASSES': [
