@@ -7,6 +7,7 @@ from rest_framework.response import Response
 from rest_framework.decorators import api_view, permission_classes
 from django.conf import settings
 from django.shortcuts import get_object_or_404
+from core import success_response, error_response
 from .models import Payment
 
 
@@ -33,14 +34,15 @@ def stripe_config(request):
     publishable_key = StripeConfig.get_publishable_key()
 
     if not publishable_key:
-        return Response(
-            {'error': 'Stripe publishable key not configured'},
-            status=status.HTTP_500_INTERNAL_SERVER_ERROR
+        return error_response(
+            message='Stripe publishable key not configured',
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR
         )
 
-    return Response({
-        'publishableKey': publishable_key
-    })
+    return success_response(
+        data={'publishableKey': publishable_key},
+        message='Stripe configuration retrieved successfully'
+    )
 
 
 @api_view(['POST'])
@@ -99,20 +101,23 @@ def create_stripe_checkout_session(request):
             }
         )
 
-        return Response({
-            'checkout_url': checkout_session.url,
-            'session_id': checkout_session.id,
-        })
+        return success_response(
+            data={
+                'checkout_url': checkout_session.url,
+                'session_id': checkout_session.id,
+            },
+            message='Stripe checkout session created successfully'
+        )
 
     except stripe.error.StripeError as e:
-        return Response(
-            {'error': f'Stripe error: {str(e)}'},
-            status=status.HTTP_400_BAD_REQUEST
+        return error_response(
+            message=f'Stripe error: {str(e)}',
+            status_code=status.HTTP_400_BAD_REQUEST
         )
     except Exception as e:
-        return Response(
-            {'error': f'Internal error: {str(e)}'},
-            status=status.HTTP_500_INTERNAL_SERVER_ERROR
+        return error_response(
+            message=f'Internal error: {str(e)}',
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR
         )
 
 
@@ -125,7 +130,7 @@ def stripe_webhook(request):
     sig_header = request.META.get('HTTP_STRIPE_SIGNATURE')
 
     if not sig_header:
-        return Response({'error': 'No signature provided'}, status=400)
+        return error_response(message='No signature provided', status_code=400)
 
     try:
         # Verify webhook signature
@@ -134,11 +139,11 @@ def stripe_webhook(request):
         )
 
     except ValueError as e:
-        return Response({'error': 'Invalid payload'}, status=400)
+        return error_response(message='Invalid payload', status_code=400)
     except stripe.error.SignatureVerificationError as e:
-        return Response({'error': 'Invalid signature'}, status=400)
+        return error_response(message='Invalid signature', status_code=400)
     except Exception as e:
-        return Response({'error': f'Webhook verification failed: {str(e)}'}, status=400)
+        return error_response(message=f'Webhook verification failed: {str(e)}', status_code=400)
 
     # Handle the event
     try:
@@ -192,26 +197,28 @@ def payment_success(request):
     session_id = request.query_params.get('session_id')
 
     if not session_id:
-        return Response(
-            {'error': 'Session ID is required'},
-            status=status.HTTP_400_BAD_REQUEST
+        return error_response(
+            message='Session ID is required',
+            status_code=status.HTTP_400_BAD_REQUEST
         )
 
     try:
         stripe.api_key = StripeConfig.get_secret_key()
         session = stripe.checkout.Session.retrieve(session_id)
 
-        return Response({
-            'status': 'success',
-            'payment_status': session.payment_status,
-            'amount_total': session.amount_total,
-            'currency': session.currency,
-        })
+        return success_response(
+            data={
+                'payment_status': session.payment_status,
+                'amount_total': session.amount_total,
+                'currency': session.currency,
+            },
+            message='Payment processed successfully'
+        )
 
     except Exception as e:
-        return Response(
-            {'error': str(e)},
-            status=status.HTTP_500_INTERNAL_SERVER_ERROR
+        return error_response(
+            message=str(e),
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR
         )
 
 
@@ -221,10 +228,10 @@ def payment_cancel(request):
     """
     Handle cancelled payment return
     """
-    return Response({
-        'status': 'cancelled',
-        'message': 'Payment was cancelled by user'
-    })
+    return success_response(
+        data={'status': 'cancelled'},
+        message='Payment was cancelled by user'
+    )
 
 
 @api_view(['GET'])
@@ -239,25 +246,28 @@ def payment_qr_data(request, payment_id):
 
         # Check if payment belongs to the authenticated user
         if payment.booking.user != request.user:
-            return Response(
-                {'error': 'Payment not found'},
-                status=status.HTTP_404_NOT_FOUND
+            return error_response(
+                message='Payment not found',
+                status_code=status.HTTP_404_NOT_FOUND
             )
 
-        return Response({
-            'qr_token': payment.qr_token,
-            'status': payment.status,
-            'amount': str(payment.amount),
-            'currency': payment.currency,
-        })
+        return success_response(
+            data={
+                'qr_token': payment.qr_token,
+                'status': payment.status,
+                'amount': str(payment.amount),
+                'currency': payment.currency,
+            },
+            message='Payment QR data retrieved successfully'
+        )
 
     except Payment.DoesNotExist:
-        return Response(
-            {'error': 'Payment not found'},
-            status=status.HTTP_404_NOT_FOUND
+        return error_response(
+            message='Payment not found',
+            status_code=status.HTTP_404_NOT_FOUND
         )
     except Exception as e:
-        return Response(
-            {'error': f'Internal error: {str(e)}'},
-            status=status.HTTP_500_INTERNAL_SERVER_ERROR
+        return error_response(
+            message=f'Internal error: {str(e)}',
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR
         )

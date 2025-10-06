@@ -6,6 +6,7 @@ from rest_framework.response import Response
 from rest_framework.decorators import api_view, permission_classes
 from django.shortcuts import get_object_or_404
 from django.db.models import Q, Count
+from core import success_response
 from .models import Booking
 from .serializers import BookingCreateSerializer, BookingDetailSerializer, BookingListSerializer
 
@@ -93,7 +94,10 @@ class BookingUpdateView(generics.UpdateAPIView):
 
         instance.save()
         serializer = self.get_serializer(instance)
-        return Response(serializer.data)
+        return success_response(
+            data=serializer.data,
+            message='Booking updated successfully'
+        )
 
 
 @api_view(['GET'])

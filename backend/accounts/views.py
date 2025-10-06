@@ -8,7 +8,8 @@ from rest_framework.views import APIView
 from rest_framework_simplejwt.tokens import RefreshToken
 from django.contrib.auth import get_user_model
 from django.conf import settings
-from .serializers import RegisterSerializer, UserSerializer
+from core import success_response, error_response
+from .serializers import RegisterSerializer, UserSerializer, LoginSerializer
 
 User = get_user_model()
 
@@ -44,10 +45,11 @@ class RegisterView(generics.CreateAPIView):
         # Return user data (without sensitive information)
         user_data = UserSerializer(user).data
 
-        return Response({
-            'message': 'User registered successfully',
-            'user': user_data
-        }, status=status.HTTP_201_CREATED)
+        return success_response(
+            data={'user': user_data},
+            message='User registered successfully',
+            status_code=status.HTTP_201_CREATED
+        )
 
 
 class UserProfileView(generics.RetrieveUpdateAPIView):
@@ -65,7 +67,7 @@ class UserProfileView(generics.RetrieveUpdateAPIView):
         return self.request.user
 
 
-class LoginView(APIView):
+class LoginView(generics.GenericAPIView):
     """
     Login with email and password, returns JWT tokens in HttpOnly cookies.
 
@@ -76,39 +78,47 @@ class LoginView(APIView):
     }
     """
     permission_classes = [AllowAny]
-
+    serializer_class = LoginSerializer
+    
     def post(self, request):
         """Authenticate user and set JWT cookies"""
-        email = request.data.get('email')
-        password = request.data.get('password')
+        serializer = self.get_serializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        
+        email = serializer.validated_data.get('email')
+        password = serializer.validated_data.get('password')
 
         if not email or not password:
-            return Response({
-                'error': 'Email and password are required'
-            }, status=status.HTTP_400_BAD_REQUEST)
+            return error_response(
+                message='Email and password are required',
+                status_code=status.HTTP_400_BAD_REQUEST
+            )
 
         # Get user by email
         try:
             user = User.objects.get(email=email)
         except User.DoesNotExist:
-            return Response({
-                'error': 'Invalid credentials'
-            }, status=status.HTTP_401_UNAUTHORIZED)
+            return error_response(
+                message='Invalid credentials',
+                status_code=status.HTTP_401_UNAUTHORIZED
+            )
 
         # Check password
         if not user.check_password(password):
-            return Response({
-                'error': 'Invalid credentials'
-            }, status=status.HTTP_401_UNAUTHORIZED)
+            return error_response(
+                message='Invalid credentials',
+                status_code=status.HTTP_401_UNAUTHORIZED
+            )
 
         # Generate tokens
         refresh = RefreshToken.for_user(user)
 
         # Create response
-        response = Response({
-            'message': 'Login successful',
-            'user': UserSerializer(user).data
-        }, status=status.HTTP_200_OK)
+        response = success_response(
+            data={'user': UserSerializer(user).data},
+            message='Login successful',
+            status_code=status.HTTP_200_OK
+        )
 
         # Set HttpOnly cookies
         response.set_cookie(
@@ -140,9 +150,10 @@ class LogoutView(APIView):
     """
     def post(self, request):
         """Clear JWT cookies"""
-        response = Response({
-            'message': 'Logout successful'
-        }, status=status.HTTP_200_OK)
+        response = success_response(
+            message='Logout successful',
+            status_code=status.HTTP_200_OK
+        )
 
         # Clear cookies
         response.delete_cookie('access_token')
@@ -162,9 +173,10 @@ class RefreshTokenView(APIView):
         refresh_token = request.COOKIES.get('refresh_token')
 
         if not refresh_token:
-            return Response({
-                'error': 'Refresh token not found'
-            }, status=status.HTTP_401_UNAUTHORIZED)
+            return error_response(
+                message='Refresh token not found',
+                status_code=status.HTTP_401_UNAUTHORIZED
+            )
 
         try:
             # Create new tokens from refresh token
@@ -172,9 +184,10 @@ class RefreshTokenView(APIView):
             access_token = str(refresh.access_token)
 
             # Create response
-            response = Response({
-                'message': 'Token refreshed successfully'
-            }, status=status.HTTP_200_OK)
+            response = success_response(
+                message='Token refreshed successfully',
+                status_code=status.HTTP_200_OK
+            )
 
             # Update access token cookie
             response.set_cookie(
@@ -189,6 +202,7 @@ class RefreshTokenView(APIView):
             return response
 
         except Exception:
-            return Response({
-                'error': 'Invalid refresh token'
-            }, status=status.HTTP_401_UNAUTHORIZED)
+            return error_response(
+                message='Invalid refresh token',
+                status_code=status.HTTP_401_UNAUTHORIZED
+            )

@@ -5,6 +5,7 @@ from rest_framework import status
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.response import Response
 from rest_framework.permissions import AllowAny
+from core import success_response, error_response
 
 
 class CovidRestrictionService:
@@ -258,9 +259,9 @@ def covid_restriction_lookup(request):
         city = request.query_params.get('city')
 
         if not country:
-            return Response(
-                {'error': 'Country parameter is required'},
-                status=status.HTTP_400_BAD_REQUEST
+            return error_response(
+                message='Country parameter is required',
+                status_code=status.HTTP_400_BAD_REQUEST
             )
 
         # Get restriction level
@@ -270,15 +271,18 @@ def covid_restriction_lookup(request):
             city=city
         )
 
-        return Response({
-            'restriction_level': restriction_level,
-            'country': country,
-            'state': state,
-            'city': city,
-        })
+        return success_response(
+            data={
+                'restriction_level': restriction_level,
+                'country': country,
+                'state': state,
+                'city': city,
+            },
+            message='COVID restriction level retrieved successfully'
+        )
 
     except Exception as e:
-        return Response(
-            {'error': f'Internal error: {str(e)}'},
-            status=status.HTTP_500_INTERNAL_SERVER_ERROR
+        return error_response(
+            message=f'Internal error: {str(e)}',
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR
         )
