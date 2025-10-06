@@ -17,7 +17,6 @@ import os
 # Import custom logging configuration and middleware
 from .logging import LOGGING
 from core.middleware import RequestLoggingMiddleware, ErrorHandlingMiddleware, custom_exception_handler
-from accounts.authentication import JWTCookieAuthentication
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent

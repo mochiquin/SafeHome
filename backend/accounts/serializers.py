@@ -2,11 +2,8 @@
 Serializers for the accounts app
 """
 from rest_framework import serializers
-from django.contrib.auth import get_user_model
 from django.db import transaction
-from .models import ConsentLog
-
-User = get_user_model()
+from .models import ConsentLog, User
 
 
 class RegisterSerializer(serializers.ModelSerializer):

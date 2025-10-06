@@ -11,8 +11,6 @@ from django.conf import settings
 from core import success_response, error_response
 from .serializers import RegisterSerializer, UserSerializer, LoginSerializer
 
-User = get_user_model()
-
 
 class RegisterView(generics.CreateAPIView):
     """
@@ -82,6 +80,7 @@ class LoginView(generics.GenericAPIView):
     
     def post(self, request):
         """Authenticate user and set JWT cookies"""
+        User = get_user_model()
         serializer = self.get_serializer(data=request.data)
         serializer.is_valid(raise_exception=True)
         
