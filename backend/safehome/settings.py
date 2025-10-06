@@ -17,7 +17,7 @@ import os
 # Import custom logging configuration and middleware
 from .logging import LOGGING
 from core.middleware import RequestLoggingMiddleware, ErrorHandlingMiddleware, custom_exception_handler
-# from accounts.authentication import JWTCookieAuthentication  # Temporarily commented out
+from accounts.authentication import JWTCookieAuthentication
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -48,7 +48,7 @@ SECRET_KEY = env('DJANGO_SECRET_KEY')
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = env('DJANGO_DEBUG')
 
-ALLOWED_HOSTS = env('DJANGO_ALLOWED_HOSTS').split(',') if env('DJANGO_ALLOWED_HOSTS') else ['localhost', '127.0.0.1', '0.0.0.0', 'testserver']
+ALLOWED_HOSTS = env('DJANGO_ALLOWED_HOSTS').split(',') if env('DJANGO_ALLOWED_HOSTS') else ['localhost', '127.0.0.1', '0.0.0.0', 'testserver', 'testclient', '172.19.0.1']
 
 # Application definition
 
@@ -168,8 +168,8 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
 # REST Framework settings
 REST_FRAMEWORK = {
-    'DEFAULT_SCHEMA_CLASS': 'drf_spectacular.openapi.AutoSchema',
     'DEFAULT_AUTHENTICATION_CLASSES': [
+        'accounts.authentication.JWTCookieAuthentication',
         'rest_framework_simplejwt.authentication.JWTAuthentication',
     ],
     'DEFAULT_PERMISSION_CLASSES': [
