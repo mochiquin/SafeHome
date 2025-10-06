@@ -29,6 +29,11 @@ env = environ.Env(
     DATABASE_URL=(str, 'sqlite:///db.sqlite3'),
     FERNET_KEY=(str, ''),
     JWT_SIGNING_KEY=(str, ''),
+    # Stripe configuration
+    STRIPE_PUBLISHABLE_KEY=(str, ''),
+    STRIPE_SECRET_KEY=(str, ''),
+    STRIPE_WEBHOOK_SECRET=(str, ''),
+    FRONTEND_URL=(str, 'http://localhost:3000'),
 )
 
 # Take environment variables from .env file if it exists
