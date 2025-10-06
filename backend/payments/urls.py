@@ -4,7 +4,8 @@ from .views import (
     create_stripe_checkout_session,
     stripe_webhook,
     payment_success,
-    payment_cancel
+    payment_cancel,
+    payment_qr_data
 )
 
 urlpatterns = [
@@ -20,4 +21,7 @@ urlpatterns = [
     # Payment success/cancel pages
     path('success/', payment_success, name='payment-success'),
     path('cancel/', payment_cancel, name='payment-cancel'),
+
+    # QR data for mobile payments (owner only)
+    path('<uuid:payment_id>/qr/', payment_qr_data, name='payment-qr-data'),
 ]

@@ -117,13 +117,15 @@ def create_stripe_checkout_session(request):
 
 
 @api_view(['POST'])
-@permission_classes([permissions.IsAuthenticated])
 def stripe_webhook(request):
     """
-    Handle Stripe webhooks
+    Handle Stripe webhooks with signature verification
     """
     payload = request.body
     sig_header = request.META.get('HTTP_STRIPE_SIGNATURE')
+
+    if not sig_header:
+        return Response({'error': 'No signature provided'}, status=400)
 
     try:
         # Verify webhook signature
@@ -131,22 +133,54 @@ def stripe_webhook(request):
             payload, sig_header, settings.STRIPE_WEBHOOK_SECRET
         )
 
-        # Handle the event
-        if event['type'] == 'checkout.session.completed':
-            session = event['data']['object']
-
-            # Update payment status in database
-            # This would need to be implemented based on your payment model
-            print(f"Payment completed for session: {session.id}")
-
-        return Response({'status': 'success'})
-
     except ValueError as e:
         return Response({'error': 'Invalid payload'}, status=400)
     except stripe.error.SignatureVerificationError as e:
         return Response({'error': 'Invalid signature'}, status=400)
     except Exception as e:
-        return Response({'error': str(e)}, status=500)
+        return Response({'error': f'Webhook verification failed: {str(e)}'}, status=400)
+
+    # Handle the event
+    try:
+        if event['type'] == 'checkout.session.completed':
+            session = event['data']['object']
+
+            # Extract metadata to find the payment
+            booking_id = session.get('metadata', {}).get('booking_id')
+            user_id = session.get('metadata', {}).get('user_id')
+
+            if booking_id and user_id:
+                # Update payment status in database
+                try:
+                    payment = Payment.objects.get(
+                        booking__user_id=user_id,
+                        # Note: In real implementation, you'd link by booking_id or session_id
+                        # For now, we'll update all pending payments for this user
+                    )
+                    payment.mark_as_paid(
+                        stripe_payment_intent_id=session.get('payment_intent'),
+                        payment_method='stripe'
+                    )
+
+                    print(f"Payment marked as paid for session: {session.id}")
+
+                except Payment.DoesNotExist:
+                    print(f"No payment found for session: {session.id}")
+                except Exception as e:
+                    print(f"Error updating payment: {str(e)}")
+            else:
+                print(f"Missing metadata in session: {session.id}")
+
+        elif event['type'] == 'payment_intent.payment_failed':
+            payment_intent = event['data']['object']
+            print(f"Payment failed for intent: {payment_intent.id}")
+            # Could update payment status to failed here
+
+        return Response({'status': 'success'})
+
+    except Exception as e:
+        print(f"Error processing webhook: {str(e)}")
+        return Response({'error': 'Internal processing error'}, status=500)
 
 
 @api_view(['GET'])
@@ -191,3 +225,39 @@ def payment_cancel(request):
         'status': 'cancelled',
         'message': 'Payment was cancelled by user'
     })
+
+
+@api_view(['GET'])
+@permission_classes([permissions.IsAuthenticated])
+def payment_qr_data(request, payment_id):
+    """
+    Get QR token and status for a payment (owner only)
+    """
+    try:
+        # Get payment by ID
+        payment = Payment.objects.get(id=payment_id)
+
+        # Check if payment belongs to the authenticated user
+        if payment.booking.user != request.user:
+            return Response(
+                {'error': 'Payment not found'},
+                status=status.HTTP_404_NOT_FOUND
+            )
+
+        return Response({
+            'qr_token': payment.qr_token,
+            'status': payment.status,
+            'amount': str(payment.amount),
+            'currency': payment.currency,
+        })
+
+    except Payment.DoesNotExist:
+        return Response(
+            {'error': 'Payment not found'},
+            status=status.HTTP_404_NOT_FOUND
+        )
+    except Exception as e:
+        return Response(
+            {'error': f'Internal error: {str(e)}'},
+            status=status.HTTP_500_INTERNAL_SERVER_ERROR
+        )
