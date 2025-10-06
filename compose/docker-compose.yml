@@ -1,0 +1,59 @@
+services:
+  mysql:
+    image: mysql:8
+    container_name: safehome_mysql
+    restart: unless-stopped
+    environment:
+      MYSQL_DATABASE: safehome
+      MYSQL_USER: safe
+      MYSQL_PASSWORD: safe_pw
+      MYSQL_ROOT_PASSWORD: root_pw
+    ports:
+      - "3306:3306"
+    volumes:
+      - mysql_data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
+      timeout: 10s
+      retries: 5
+      start_period: 30s
+
+  api:
+    build: ../backend
+    container_name: safehome_api
+    restart: unless-stopped
+    env_file: .env
+    ports:
+      - "8000:8000"
+    volumes:
+      - ../backend:/app
+    depends_on:
+      mysql:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health/"]
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+  web:
+    build: ../frontend
+    container_name: safehome_web
+    restart: unless-stopped
+    env_file: .env
+    ports:
+      - "3000:3000"
+    volumes:
+      - ../frontend:/app
+    depends_on:
+      - api
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3000"]
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+
+volumes:
+  mysql_data:
+    driver: local
+
