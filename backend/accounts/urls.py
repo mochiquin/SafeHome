@@ -3,12 +3,17 @@ from rest_framework_simplejwt.views import (
     TokenObtainPairView,
     TokenRefreshView,
 )
-from .views import RegisterView, UserProfileView
+from .views import RegisterView, UserProfileView, LoginView, LogoutView, RefreshTokenView
 
 urlpatterns = [
-    # JWT Authentication endpoints
+    # JWT Authentication endpoints (legacy, still available)
     path('token/', TokenObtainPairView.as_view(), name='token_obtain_pair'),
     path('token/refresh/', TokenRefreshView.as_view(), name='token_refresh'),
+
+    # Cookie-based authentication endpoints
+    path('login/', LoginView.as_view(), name='login'),
+    path('logout/', LogoutView.as_view(), name='logout'),
+    path('refresh/', RefreshTokenView.as_view(), name='token_refresh_cookie'),
 
     # Registration and profile endpoints
     path('register/', RegisterView.as_view(), name='register'),

@@ -14,6 +14,11 @@ from pathlib import Path
 import environ
 import os
 
+# Import custom logging configuration and middleware
+from .logging import LOGGING
+from core.middleware import RequestLoggingMiddleware, ErrorHandlingMiddleware, custom_exception_handler
+from accounts.authentication import JWTCookieAuthentication
+
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
 
@@ -38,7 +43,7 @@ SECRET_KEY = env('DJANGO_SECRET_KEY')
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = env('DJANGO_DEBUG')
 
-ALLOWED_HOSTS = env('DJANGO_ALLOWED_HOSTS').split(',') if env('DJANGO_ALLOWED_HOSTS') else ['localhost', '127.0.0.1']
+ALLOWED_HOSTS = env('DJANGO_ALLOWED_HOSTS').split(',') if env('DJANGO_ALLOWED_HOSTS') else ['localhost', '127.0.0.1', '0.0.0.0', 'testserver']
 
 # Application definition
 
@@ -74,6 +79,10 @@ MIDDLEWARE = [
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
+
+    # Custom middleware
+    'core.middleware.RequestLoggingMiddleware',
+    'core.middleware.ErrorHandlingMiddleware',
 ]
 
 ROOT_URLCONF = 'safehome.urls'
@@ -156,11 +165,13 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 REST_FRAMEWORK = {
     'DEFAULT_SCHEMA_CLASS': 'drf_spectacular.openapi.AutoSchema',
     'DEFAULT_AUTHENTICATION_CLASSES': [
+        'accounts.authentication.JWTCookieAuthentication',
         'rest_framework_simplejwt.authentication.JWTAuthentication',
     ],
     'DEFAULT_PERMISSION_CLASSES': [
         'rest_framework.permissions.IsAuthenticated',
     ],
+    'EXCEPTION_HANDLER': 'core.middleware.custom_exception_handler',
 }
 
 # JWT settings
@@ -178,19 +189,5 @@ CORS_ALLOWED_ORIGINS = env('DJANGO_CORS_ALLOWED_ORIGINS').split(',') if env('DJA
 # Custom User model
 AUTH_USER_MODEL = 'accounts.User'
 
-# Logging
-LOGGING = {
-    'version': 1,
-    'disable_existing_loggers': False,
-    'handlers': {
-        'console': {
-            'class': 'logging.StreamHandler',
-        },
-    },
-    'loggers': {
-        'django': {
-            'handlers': ['console'],
-            'level': env('DJANGO_LOG_LEVEL'),
-        },
-    },
-}
+# Use custom logging configuration from logging.py
+# LOGGING = LOGGING  # This is already imported at the top
