@@ -12,6 +12,46 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 django.setup()
 
 from services.models import Service
+from django.contrib.auth import get_user_model
+
+User = get_user_model()
+
+def seed_users():
+    """Create sample users for testing"""
+    print("Seeding users...")
+
+    users_data = [
+        {
+            "username": "customer",
+            "email": "customer@safehome.com",
+            "password": "password",
+            "first_name": "John",
+            "last_name": "Doe",
+            "role": "customer",
+            "is_staff": False,
+            "is_superuser": False,
+        },
+        {
+            "username": "admin",
+            "email": "admin@safehome.com",
+            "password": "password",
+            "first_name": "Admin",
+            "last_name": "User",
+            "role": "admin",
+            "is_staff": True,
+            "is_superuser": True,
+        },
+    ]
+
+    created_count = 0
+    for user_data in users_data:
+        if not User.objects.filter(username=user_data['username']).exists():
+            User.objects.create_user(**user_data)
+            created_count += 1
+            print(f"Created user: {user_data['username']}")
+
+    print(f"User seed completed. Created {created_count} new users.")
+
 
 def seed_services():
     """Create sample services for testing"""
@@ -62,4 +102,5 @@ def seed_services():
     print(f"Seed completed. Created {created_count} new services.")
 
 if __name__ == '__main__':
+    seed_users()
     seed_services()

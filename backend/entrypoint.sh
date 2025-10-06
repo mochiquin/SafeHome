@@ -41,6 +41,14 @@ else:
 EOF
 fi
 
+# Run seed script if SEED_DB is true
+if [ "$SEED_DB" = "true" ] && [ -f "scripts/seed.py" ]; then
+    echo "🌱 Running seed script..."
+    python scripts/seed.py
+else
+    echo "ℹ️  SEED_DB is not true or seed script not found, skipping..."
+fi
+
 # Collect static files (for production)
 if [ "$DJANGO_SETTINGS_MODULE" = "safehome.settings.production" ]; then
     echo "📁 Collecting static files..."
