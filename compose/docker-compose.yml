@@ -9,7 +9,7 @@ services:
       MYSQL_PASSWORD: safe_pw
       MYSQL_ROOT_PASSWORD: root_pw
     ports:
-      - "3306:3306"
+      - "3307:3306"
     volumes:
       - mysql_data:/var/lib/mysql
     healthcheck:
@@ -35,23 +35,6 @@ services:
       timeout: 10s
       retries: 3
       start_period: 40s
-
-  web:
-    build: ../frontend
-    container_name: safehome_web
-    restart: unless-stopped
-    env_file: .env
-    ports:
-      - "3000:3000"
-    volumes:
-      - ../frontend:/app
-    depends_on:
-      - api
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:3000"]
-      timeout: 10s
-      retries: 3
-      start_period: 30s
 
 volumes:
   mysql_data:
