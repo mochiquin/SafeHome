@@ -49,6 +49,7 @@ export {
   PaginationNext,
   PaginationPrevious,
 } from "./pagination"
+export { RadioGroup, RadioGroupItem } from "./radio-group"
 
 // Custom UI Components
 export { ImageWithBackground } from "./image-with-background"
