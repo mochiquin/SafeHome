@@ -3,7 +3,7 @@
 import React from 'react';
 import Link from 'next/link';
 import { Button } from '@/components/ui';
-import { Logo } from '@/components/auth';
+import { Logo } from '@/components/pro-blocks/logo';
 
 export function Navbar() {
   return (
