@@ -1,7 +1,11 @@
+"use client";
+
+import { SignInPage } from "@/components/auth";
+
 export default function Home() {
   return (
-    <main>
-      <h1>SafeHome</h1>
-    </main>
+    <div className="min-h-screen bg-background">
+      <SignInPage />
+    </div>
   );
 }
