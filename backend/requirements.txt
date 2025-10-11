@@ -1,6 +1,7 @@
 Django==4.2.7
 djangorestframework==3.14.0
 djangorestframework-simplejwt==5.3.0
+drf-spectacular==0.27.2
 cryptography==41.0.7
 mysqlclient==2.2.0
 stripe==7.7.0
