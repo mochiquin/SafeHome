@@ -3,13 +3,37 @@ Views for the accounts app
 """
 from rest_framework import status, generics
 from rest_framework.response import Response
-from rest_framework.permissions import AllowAny, IsAuthenticated
+from rest_framework.permissions import AllowAny, IsAuthenticated, BasePermission
 from rest_framework.views import APIView
 from rest_framework_simplejwt.tokens import RefreshToken
 from django.contrib.auth import get_user_model
 from django.conf import settings
 from core import success_response, error_response
 from .serializers import RegisterSerializer, UserSerializer, LoginSerializer
+
+
+class IsCustomer(BasePermission):
+    """Permission class for customer-only access"""
+    def has_permission(self, request, view):
+        return request.user and request.user.is_authenticated and request.user.role == 'customer'
+
+
+class IsProvider(BasePermission):
+    """Permission class for provider-only access"""
+    def has_permission(self, request, view):
+        return request.user and request.user.is_authenticated and request.user.role == 'provider'
+
+
+class IsAdmin(BasePermission):
+    """Permission class for admin-only access"""
+    def has_permission(self, request, view):
+        return request.user and request.user.is_authenticated and request.user.role == 'admin'
+
+
+class CanCreateServices(BasePermission):
+    """Permission class for users who can create/manage services (providers and admins)"""
+    def has_permission(self, request, view):
+        return request.user and request.user.is_authenticated and request.user.can_create_services()
 
 
 class RegisterView(generics.CreateAPIView):
@@ -86,6 +110,7 @@ class LoginView(generics.GenericAPIView):
         
         email = serializer.validated_data.get('email')
         password = serializer.validated_data.get('password')
+        requested_role = serializer.validated_data.get('role')
 
         if not email or not password:
             return error_response(
@@ -107,6 +132,13 @@ class LoginView(generics.GenericAPIView):
             return error_response(
                 message='Invalid credentials',
                 status_code=status.HTTP_401_UNAUTHORIZED
+            )
+
+        # If role is specified, verify user has that role
+        if requested_role and user.role != requested_role:
+            return error_response(
+                message=f'Access denied. User is registered as {user.role}, not {requested_role}',
+                status_code=status.HTTP_403_FORBIDDEN
             )
 
         # Generate tokens
@@ -139,6 +171,75 @@ class LoginView(generics.GenericAPIView):
         )
 
         return response
+
+
+class CustomerDashboardView(APIView):
+    """
+    Dashboard for customers - shows available services, bookings, etc.
+    GET /api/auth/customer/dashboard
+    """
+    permission_classes = [IsAuthenticated, IsCustomer]
+
+    def get(self, request):
+        """Get customer dashboard data"""
+        user = request.user
+
+        # Get user's bookings count
+        bookings_count = user.bookings.count()
+
+        # Get available services count
+        from services.models import Service
+        services_count = Service.objects.filter(is_active=True).count()
+
+        dashboard_data = {
+            'user': UserSerializer(user).data,
+            'stats': {
+                'total_bookings': bookings_count,
+                'available_services': services_count,
+            },
+            'recent_bookings': [],  # Could add recent bookings logic here
+        }
+
+        return success_response(
+            data=dashboard_data,
+            message='Customer dashboard data retrieved successfully'
+        )
+
+
+class ProviderDashboardView(APIView):
+    """
+    Dashboard for service providers - shows their services, bookings, earnings, etc.
+    GET /api/auth/provider/dashboard
+    """
+    permission_classes = [IsAuthenticated, IsProvider]
+
+    def get(self, request):
+        """Get provider dashboard data"""
+        user = request.user
+
+        # Get provider's services count
+        services_count = user.services.count()
+
+        # Get bookings for provider's services
+        bookings_count = 0  # Would need to implement this logic
+
+        # Get earnings (would need payment integration)
+        earnings = 0
+
+        dashboard_data = {
+            'user': UserSerializer(user).data,
+            'stats': {
+                'total_services': services_count,
+                'total_bookings': bookings_count,
+                'total_earnings': earnings,
+            },
+            'recent_services': [],  # Could add recent services logic
+        }
+
+        return success_response(
+            data=dashboard_data,
+            message='Provider dashboard data retrieved successfully'
+        )
 
 
 class LogoutView(APIView):

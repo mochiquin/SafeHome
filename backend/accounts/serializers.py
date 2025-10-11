@@ -57,6 +57,12 @@ class RegisterSerializer(serializers.ModelSerializer):
             raise serializers.ValidationError("A user with this username already exists.")
         return value
 
+    def validate_role(self, value):
+        """Validate that the role is one of the allowed choices"""
+        if value not in ['customer', 'provider', 'admin']:
+            raise serializers.ValidationError("Invalid role. Must be 'customer', 'provider', or 'admin'.")
+        return value
+
     def validate(self, data):
         """Validate password confirmation and consent"""
         if data.get('password') != data.get('password_confirm'):
@@ -121,6 +127,11 @@ class LoginSerializer(serializers.Serializer):
         write_only=True,
         required=True,
         style={'input_type': 'password'}
+    )
+    role = serializers.ChoiceField(
+        choices=[('customer', 'Customer'), ('provider', 'Service Provider')],
+        required=False,
+        help_text='Optional: specify the role to login as'
     )
 
 

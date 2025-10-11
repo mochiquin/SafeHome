@@ -6,13 +6,20 @@ class User(AbstractUser):
     # Override email field to make it unique
     email = models.EmailField(unique=True, verbose_name='email address')
 
+    # User role choices
+    ROLE_CHOICES = [
+        ('customer', 'Customer'),
+        ('provider', 'Service Provider'),
+        ('admin', 'Administrator'),
+    ]
+
     # Custom fields as per requirements
     role = models.CharField(
-        max_length=50,
-        blank=True,
-        null=True,
+        max_length=20,
+        choices=ROLE_CHOICES,
+        default='customer',
         verbose_name='User Role',
-        help_text='User role (e.g., customer, provider, admin)'
+        help_text='User role: customer, provider, or admin'
     )
 
     city = models.CharField(
@@ -38,7 +45,28 @@ class User(AbstractUser):
         verbose_name_plural = 'Users'
 
     def __str__(self):
-        return f"{self.email} ({self.get_full_name()})"
+        return f"{self.email} ({self.get_full_name()}) - {self.role}"
+
+    # Role checking methods
+    def is_customer(self):
+        """Check if user is a customer"""
+        return self.role == 'customer'
+
+    def is_provider(self):
+        """Check if user is a service provider"""
+        return self.role == 'provider'
+
+    def is_admin(self):
+        """Check if user is an administrator"""
+        return self.role == 'admin'
+
+    def can_create_services(self):
+        """Check if user can create/manage services (providers and admins)"""
+        return self.role in ['provider', 'admin']
+
+    def can_book_services(self):
+        """Check if user can book services (customers)"""
+        return self.role == 'customer'
 
 
 class ConsentLog(models.Model):

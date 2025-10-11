@@ -3,7 +3,10 @@ from rest_framework_simplejwt.views import (
     TokenObtainPairView,
     TokenRefreshView,
 )
-from .views import RegisterView, UserProfileView, LoginView, LogoutView, RefreshTokenView
+from .views import (
+    RegisterView, UserProfileView, LoginView, LogoutView, RefreshTokenView,
+    CustomerDashboardView, ProviderDashboardView
+)
 
 urlpatterns = [
     # JWT Authentication endpoints (legacy, still available)
@@ -18,4 +21,8 @@ urlpatterns = [
     # Registration and profile endpoints
     path('register/', RegisterView.as_view(), name='register'),
     path('me/', UserProfileView.as_view(), name='user_profile'),
+
+    # Role-specific dashboard endpoints
+    path('customer/dashboard/', CustomerDashboardView.as_view(), name='customer_dashboard'),
+    path('provider/dashboard/', ProviderDashboardView.as_view(), name='provider_dashboard'),
 ]
