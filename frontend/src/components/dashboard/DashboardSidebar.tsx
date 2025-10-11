@@ -1,17 +1,25 @@
 interface DashboardSidebarProps {
   activeSection?: string;
   onSectionChange?: (section: string) => void;
+  userType?: 'customer' | 'provider';
 }
 
-export function DashboardSidebar({ activeSection, onSectionChange }: DashboardSidebarProps) {
-  const menuItems = [
+export function DashboardSidebar({ activeSection, onSectionChange, userType = 'customer' }: DashboardSidebarProps) {
+  const customerMenuItems = [
     { id: 'profile', label: 'Profile', component: 'ProfileSection' },
     { id: 'bookings', label: 'My Bookings', component: 'BookingsSection' },
-    { id: 'services', label: 'My Orders', component: 'ServicesSection' },
-    { id: 'all-services', label: 'Available Tasks', component: 'AllServicesSection' },
     { id: 'new-booking', label: 'Book Service', component: 'NewBookingSection' },
     { id: 'details', label: 'Account Details', component: 'DetailsSection' },
   ];
+
+  const providerMenuItems = [
+    { id: 'profile', label: 'Profile', component: 'ProfileSection' },
+    { id: 'all-services', label: 'Available Tasks', component: 'AllServicesSection' },
+    { id: 'services', label: 'My Services', component: 'ServicesSection' },
+    { id: 'details', label: 'Account Details', component: 'DetailsSection' },
+  ];
+
+  const menuItems = userType === 'customer' ? customerMenuItems : providerMenuItems;
 
   return (
     <aside className="border-border hidden w-64 border-r py-6 pr-6 md:block">

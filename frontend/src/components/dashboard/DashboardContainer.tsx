@@ -10,23 +10,27 @@ import { AllServicesSection } from "./all-services";
 import { NewBookingSection } from "./new-booking";
 import { DetailsSection } from "./details";
 
-export function DashboardContainer() {
+interface DashboardContainerProps {
+  userType?: 'customer' | 'provider';
+}
+
+export function DashboardContainer({ userType = 'customer' }: DashboardContainerProps) {
   const [activeSection, setActiveSection] = useState("profile");
 
   const renderSection = () => {
     switch (activeSection) {
       case "profile":
         return <ProfileSection />;
-      case "bookings":
-        return <BookingsSection />;
-      case "services":
-        return <ServicesSection />;
-      case "all-services":
-        return <AllServicesSection />;
-      case "new-booking":
-        return <NewBookingSection />;
       case "details":
         return <DetailsSection />;
+      case "bookings":
+        return userType === 'customer' ? <BookingsSection /> : <ServicesSection />;
+      case "new-booking":
+        return userType === 'customer' ? <NewBookingSection /> : null;
+      case "all-services":
+        return userType === 'provider' ? <AllServicesSection /> : null;
+      case "services":
+        return userType === 'provider' ? <ServicesSection /> : <BookingsSection />;
       default:
         return <ProfileSection />;
     }
@@ -41,6 +45,7 @@ export function DashboardContainer() {
           <DashboardSidebar
             activeSection={activeSection}
             onSectionChange={setActiveSection}
+            userType={userType}
           />
 
           <main className="flex-1">
