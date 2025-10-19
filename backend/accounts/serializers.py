@@ -104,7 +104,7 @@ class RegisterSerializer(serializers.ModelSerializer):
                 password=validated_data['password'],
                 first_name=validated_data.get('first_name', ''),
                 last_name=validated_data.get('last_name', ''),
-                role=validated_data.get('role'),
+                role=validated_data.get('role', 'customer'),
                 city=validated_data.get('city'),
                 vaccinated=validated_data.get('vaccinated', False)
             )
@@ -152,4 +152,4 @@ class UserSerializer(serializers.ModelSerializer):
             'date_joined',
             'last_login'
         ]
-        read_only_fields = ['id', 'date_joined', 'last_login']
+        read_only_fields = ['id', 'email', 'username', 'date_joined', 'last_login']

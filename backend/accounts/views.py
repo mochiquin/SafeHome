@@ -8,7 +8,10 @@ from rest_framework.views import APIView
 from rest_framework_simplejwt.tokens import RefreshToken
 from django.contrib.auth import get_user_model
 from django.conf import settings
+from django.utils.decorators import method_decorator
+from django.views.decorators.csrf import csrf_exempt
 from core import success_response, error_response
+from core.parsers import EncryptedJSONParser
 from .serializers import RegisterSerializer, UserSerializer, LoginSerializer
 
 
@@ -36,6 +39,7 @@ class CanCreateServices(BasePermission):
         return request.user and request.user.is_authenticated and request.user.can_create_services()
 
 
+@method_decorator(csrf_exempt, name='dispatch')
 class RegisterView(generics.CreateAPIView):
     """
     Register a new user account.
@@ -56,6 +60,7 @@ class RegisterView(generics.CreateAPIView):
     """
     serializer_class = RegisterSerializer
     permission_classes = [AllowAny]
+    parser_classes = [EncryptedJSONParser]
 
     def create(self, request, *args, **kwargs):
         """Create user and return success response"""
@@ -81,14 +86,41 @@ class UserProfileView(generics.RetrieveUpdateAPIView):
     GET /api/auth/me - Get current user profile
     PATCH /api/auth/me - Update current user profile
     """
+    from .authentication import JWTCookieAuthentication
+    
     serializer_class = UserSerializer
+    authentication_classes = [JWTCookieAuthentication]
     permission_classes = [IsAuthenticated]
-
+    parser_classes = [EncryptedJSONParser]
+    
     def get_object(self):
         """Get the current authenticated user"""
         return self.request.user
+    
+    def retrieve(self, request, *args, **kwargs):
+        """Get current user profile with unified response format"""
+        instance = self.get_object()
+        serializer = self.get_serializer(instance)
+        return success_response(
+            data=serializer.data,
+            message='User profile retrieved successfully'
+        )
+    
+    def update(self, request, *args, **kwargs):
+        """Update current user profile with unified response format"""
+        partial = kwargs.pop('partial', False)
+        instance = self.get_object()
+        serializer = self.get_serializer(instance, data=request.data, partial=partial)
+        serializer.is_valid(raise_exception=True)
+        self.perform_update(serializer)
+        
+        return success_response(
+            data=serializer.data,
+            message='User profile updated successfully'
+        )
 
 
+@method_decorator(csrf_exempt, name='dispatch')
 class LoginView(generics.GenericAPIView):
     """
     Login with email and password, returns JWT tokens in HttpOnly cookies.
@@ -101,6 +133,7 @@ class LoginView(generics.GenericAPIView):
     """
     permission_classes = [AllowAny]
     serializer_class = LoginSerializer
+    parser_classes = [EncryptedJSONParser]
     
     def post(self, request):
         """Authenticate user and set JWT cookies"""
@@ -152,13 +185,18 @@ class LoginView(generics.GenericAPIView):
         )
 
         # Set HttpOnly cookies
+        # For cross-origin requests (localhost:3000 -> localhost:8000), we need:
+        # 1. CORS_ALLOW_CREDENTIALS = True (already set)
+        # 2. withCredentials: true in axios (already set)
+        # 3. samesite='None' and secure=True for cross-origin, BUT for localhost HTTP we use 'Lax'
         response.set_cookie(
             'access_token',
             str(refresh.access_token),
             max_age=settings.SIMPLE_JWT['ACCESS_TOKEN_LIFETIME'].total_seconds(),
             httponly=True,
-            secure=settings.DEBUG is False,  # Secure in production
-            samesite='Lax'
+            secure=False,  # Must be False for localhost HTTP
+            samesite='Lax',  # Lax allows cookies in same-site contexts
+            path='/',  # Available for all paths
         )
 
         response.set_cookie(
@@ -166,8 +204,9 @@ class LoginView(generics.GenericAPIView):
             str(refresh),
             max_age=settings.SIMPLE_JWT['REFRESH_TOKEN_LIFETIME'].total_seconds(),
             httponly=True,
-            secure=settings.DEBUG is False,
-            samesite='Lax'
+            secure=False,  # Must be False for localhost HTTP
+            samesite='Lax',  # Lax allows cookies in same-site contexts
+            path='/',  # Available for all paths
         )
 
         return response
@@ -178,6 +217,9 @@ class CustomerDashboardView(APIView):
     Dashboard for customers - shows available services, bookings, etc.
     GET /api/auth/customer/dashboard
     """
+    from .authentication import JWTCookieAuthentication
+    
+    authentication_classes = [JWTCookieAuthentication]
     permission_classes = [IsAuthenticated, IsCustomer]
 
     def get(self, request):
@@ -211,6 +253,9 @@ class ProviderDashboardView(APIView):
     Dashboard for service providers - shows their services, bookings, earnings, etc.
     GET /api/auth/provider/dashboard
     """
+    from .authentication import JWTCookieAuthentication
+    
+    authentication_classes = [JWTCookieAuthentication]
     permission_classes = [IsAuthenticated, IsProvider]
 
     def get(self, request):
@@ -242,6 +287,7 @@ class ProviderDashboardView(APIView):
         )
 
 
+@method_decorator(csrf_exempt, name='dispatch')
 class LogoutView(APIView):
     """
     Logout user by clearing JWT cookies.
@@ -262,6 +308,7 @@ class LogoutView(APIView):
         return response
 
 
+@method_decorator(csrf_exempt, name='dispatch')
 class RefreshTokenView(APIView):
     """
     Refresh JWT access token using refresh token cookie.
@@ -295,8 +342,9 @@ class RefreshTokenView(APIView):
                 access_token,
                 max_age=settings.SIMPLE_JWT['ACCESS_TOKEN_LIFETIME'].total_seconds(),
                 httponly=True,
-                secure=settings.DEBUG is False,
-                samesite='Lax'
+                secure=False,  # Must be False for localhost HTTP
+                samesite='Lax',  # Lax allows cookies in same-site contexts
+                path='/',  # Available for all paths
             )
 
             return response
