@@ -29,6 +29,7 @@ class CovidRestrictionService:
             },
             'VIC': {  # Victoria
                 'Melbourne': 'high',
+                'Parkville': 'high',
                 'Geelong': 'medium',
                 'Ballarat': 'low',
                 'Bendigo': 'low',
@@ -178,19 +179,26 @@ class CovidRestrictionService:
     def get_restriction_level(cls, country: str, state: str = None, city: str = None) -> str:
         """
         Get COVID restriction level for a location
-
+        
         Args:
             country: Country code (e.g., 'AU', 'US', 'CA', 'GB')
             state: State/province code (optional)
             city: City name (optional)
-
+            
         Returns:
             Restriction level: 'high', 'medium', 'low', or 'unknown'
         """
         # Normalize inputs
         country = country.upper() if country else None
         state = state.upper() if state else None
-        city = city.lower().title() if city else None  # Title case for city names
+        # Clean city name: strip whitespace, remove trailing slashes, then convert to title case
+        if city:
+            # Remove all trailing slashes and spaces
+            city = city.strip().rstrip('/ ').strip().lower().title()
+            if not city:  # If empty after cleaning
+                city = None
+        else:
+            city = None
 
         # Check if country exists
         if country not in cls.RESTRICTION_DATA:
@@ -198,14 +206,17 @@ class CovidRestrictionService:
 
         country_data = cls.RESTRICTION_DATA[country]
 
-        # If no state provided, return country-level default
+        # If city is provided but no state, search for the city across all states
+        if city and not state:
+            for state_code, state_data in country_data.items():
+                if isinstance(state_data, dict) and city in state_data:
+                    return state_data[city]
+            # City not found in any state
+            return 'unknown'
+
+        # If no state provided and no city, return unknown
         if not state:
-            # For countries with state-level data, return 'unknown' since we need state info
-            # For countries with direct city data, calculate most common level
-            if country in ['US', 'AU', 'CA', 'GB']:
-                return 'unknown'  # These countries require state info
-            else:
-                return 'unknown'
+            return 'unknown'
 
         # Check if state exists in country
         if state not in country_data:
@@ -229,7 +240,7 @@ class CovidRestrictionService:
             else:
                 return state_data
 
-        # Look up specific city
+        # Look up specific city in the given state
         if isinstance(state_data, dict) and city in state_data:
             return state_data[city]
 
