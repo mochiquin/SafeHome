@@ -1,7 +1,7 @@
 // API客户端统一导出
-export { authApi } from './auth'
-export { servicesApi } from './services'
-export { bookingsApi } from './bookings'
+export * from './auth'
+export * from './bookings'
+export * from './services'
 export { paymentsApi } from './payments'
 
 // 导出类型

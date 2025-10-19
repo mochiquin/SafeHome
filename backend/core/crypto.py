@@ -6,6 +6,7 @@ import base64
 from cryptography.fernet import Fernet
 from cryptography.hazmat.primitives import hashes
 from cryptography.hazmat.primitives.kdf.pbkdf2 import PBKDF2HMAC
+from cryptography.hazmat.primitives.ciphers.aead import AESGCM
 
 
 def _derive_key(key_string: str) -> bytes:
@@ -89,5 +90,42 @@ def dec(encrypted_data: str) -> str:
         raise ValueError(f"Decryption failed: {str(e)}")
 
 
+def dec_aes_gcm(encrypted_data: str) -> str:
+    """
+    Decrypts data encrypted with AES-GCM from the frontend.
+    The format is expected to be "iv:ciphertext:tag".
+    """
+    if not isinstance(encrypted_data, str):
+        raise TypeError("Encrypted data must be a string")
+
+    fernet_key = os.environ.get('FERNET_KEY')
+    if not fernet_key:
+        raise ValueError("FERNET_KEY environment variable is required")
+
+    try:
+        iv_hex, ciphertext_hex, tag_hex = encrypted_data.split(':')
+        
+        iv = bytes.fromhex(iv_hex)
+        ciphertext = bytes.fromhex(ciphertext_hex)
+        tag = bytes.fromhex(tag_hex)
+
+        # Derive the raw 32-byte key for AES-GCM (not base64 encoded)
+        salt = b"safehome_salt_2024"
+        kdf = PBKDF2HMAC(
+            algorithm=hashes.SHA256(),
+            length=32,
+            salt=salt,
+            iterations=100000,
+        )
+        key_bytes = kdf.derive(fernet_key.encode())
+        
+        aesgcm = AESGCM(key_bytes)
+        
+        decrypted_bytes = aesgcm.decrypt(iv, ciphertext + tag, None)
+        return decrypted_bytes.decode('utf-8')
+    except Exception as e:
+        raise ValueError(f"AES-GCM decryption failed: {str(e)}")
+
+
 # Export the functions
-__all__ = ['enc', 'dec']
+__all__ = ['enc', 'dec', 'dec_aes_gcm']

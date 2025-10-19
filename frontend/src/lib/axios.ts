@@ -4,7 +4,8 @@ import axios from 'axios'
  * Create axios instance with default configuration
  */
 const api = axios.create({
-  baseURL: process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api',
+  baseURL: 'http://localhost:8000/api',
+  withCredentials: true, // Send cookies with cross-origin requests
   timeout: 10000,
   headers: {
     'Content-Type': 'application/json',
@@ -16,20 +17,13 @@ const api = axios.create({
  */
 api.interceptors.request.use(
   (config) => {
-    // Get token from localStorage
+    // For cookie-based authentication, we don't need to manually add Authorization header
+    // The browser will automatically include cookies with requests to the same domain
+
+    // Only add Authorization header if we have a token in localStorage (fallback)
     const token = localStorage.getItem('access_token')
-    if (token) {
+    if (token && !document.cookie.includes('access_token=')) {
       config.headers.Authorization = `Bearer ${token}`
-    }
-
-    // Get token from cookie (if using HttpOnly cookies)
-    const accessToken = document.cookie
-      .split('; ')
-      .find(row => row.startsWith('access_token='))
-      ?.split('=')[1]
-
-    if (accessToken) {
-      config.headers.Authorization = `Bearer ${accessToken}`
     }
 
     return config
@@ -40,22 +34,69 @@ api.interceptors.request.use(
 )
 
 /**
- * Response interceptor for error handling
+ * Response interceptor for error handling and token refresh
  */
+let isRefreshing = false;
+let failedQueue: { resolve: (value?: any) => void; reject: (reason?: any) => void; }[] = [];
+
+const processQueue = (error: any, token: string | null = null) => {
+  failedQueue.forEach(prom => {
+    if (error) {
+      prom.reject(error);
+    } else {
+      prom.resolve(token);
+    }
+  });
+
+  failedQueue = [];
+};
+
 api.interceptors.response.use(
   (response) => {
     return response
   },
-  (error) => {
-    // Handle common errors
-    if (error.response?.status === 401) {
-      // Unauthorized - clear token and redirect to login
-      localStorage.removeItem('access_token')
-      window.location.href = '/login'
+  async (error) => {
+    const originalRequest = error.config;
+
+    if (error.response?.status === 401 && !originalRequest._retry) {
+      if (isRefreshing) {
+        return new Promise(function(resolve, reject) {
+          failedQueue.push({ resolve, reject });
+        })
+          .then(() => {
+            return api(originalRequest);
+          })
+          .catch(err => {
+            return Promise.reject(err);
+          });
+      }
+
+      originalRequest._retry = true;
+      isRefreshing = true;
+
+      try {
+        await api.post('/auth/refresh/');
+        processQueue(null, 'refreshed');
+        return api(originalRequest);
+      } catch (refreshError: any) {
+        processQueue(refreshError, null);
+        
+        // If refresh fails, logout and redirect
+        localStorage.removeItem('access_token'); // Clear any fallback token
+        if (typeof window !== 'undefined') {
+          // Avoid redirect loops
+          if (window.location.pathname !== '/login') {
+            window.location.href = '/login';
+          }
+        }
+        return Promise.reject(refreshError);
+      } finally {
+        isRefreshing = false;
+      }
     }
 
+    // Handle other errors
     if (error.response?.status >= 500) {
-      // Server error
       console.error('Server error:', error.response.data)
     }
 

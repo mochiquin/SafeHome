@@ -10,9 +10,9 @@ echo "🚀 Starting SafeHome Backend..."
 # Wait for database to be ready (for Docker Compose)
 # Skip if DATABASE_URL is not set or if it's a SQLite database
 if [ "$DATABASE_URL" ] && [[ "$DATABASE_URL" != *"sqlite"* ]]; then
-    echo "⏳ Waiting for database..."
-    # For now, skip the wait_for_db command as it may not exist yet
+    echo "⏳ Waiting for database to be ready..."
     python manage.py wait_for_db --settings=safehome.settings
+    echo "✅ Database is ready!"
 fi
 
 # Run database migrations

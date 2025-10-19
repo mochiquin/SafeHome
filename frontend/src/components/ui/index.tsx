@@ -37,9 +37,13 @@ export {
   SelectTrigger,
   SelectValue,
 } from "./select"
-export { Separator } from "./separator"
 export { Tabs, TabsContent, TabsList, TabsTrigger } from "./tabs"
 export { Textarea } from "./textarea"
+export {
+  Tooltip,
+  TooltipTrigger,
+  TooltipContent,
+} from "./tooltip"
 export {
   Pagination,
   PaginationContent,
