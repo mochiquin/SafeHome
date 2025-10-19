@@ -2,12 +2,13 @@
 
 import React from 'react';
 import { useRouter } from 'next/navigation';
+import Link from 'next/link';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { Button, Input, Label, Checkbox, Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui";
 import { authApi } from "@/lib/apis";
 import { registerSchema, type RegisterFormData } from "@/lib/validations/auth";
-import { Info } from 'lucide-react';
+import { Info, ExternalLink } from 'lucide-react';
 import { toast } from "sonner";
 import { Controller } from "react-hook-form";
 
@@ -203,19 +204,38 @@ export function RegisterForm({ role }: RegisterFormProps) {
         name="consent"
         control={control}
         render={({ field }: { field: any }) => (
-          <div className="flex items-center space-x-2">
-            <Checkbox
-              id="consent"
-              checked={field.value}
-              onCheckedChange={field.onChange}
-              disabled={isLoading}
-            />
-            <Label htmlFor="consent">I agree to the terms and conditions *</Label>
+          <div className="space-y-2">
+            <div className="flex items-start space-x-2">
+              <Checkbox
+                id="consent"
+                checked={field.value}
+                onCheckedChange={field.onChange}
+                disabled={isLoading}
+                className="mt-1"
+              />
+              <Label htmlFor="consent" className="text-sm leading-relaxed cursor-pointer">
+                I have read and agree to SafeHome's{' '}
+                <Link 
+                  href="/privacy-policy" 
+                  target="_blank"
+                  className="text-primary hover:underline inline-flex items-center gap-1"
+                >
+                  Privacy Policy & Terms of Service
+                  <ExternalLink className="h-3 w-3" />
+                </Link>
+                {' '}*
+              </Label>
+            </div>
+            <p className="text-xs text-muted-foreground ml-6">
+              By checking this box, you consent to the collection, use, and processing of your 
+              personal data as described in our Privacy Policy. Your sensitive information 
+              (address, phone) will be encrypted for your protection.
+            </p>
           </div>
         )}
       />
       {errors.consent && (
-        <p className="text-sm text-red-600">{errors.consent.message}</p>
+        <p className="text-sm text-red-600 ml-6">{errors.consent.message}</p>
       )}
       <Button type="submit" className="w-full" disabled={isLoading}>
         {isLoading ? 'Creating account...' : 'Create account'}
