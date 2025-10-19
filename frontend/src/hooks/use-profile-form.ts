@@ -1,67 +1,55 @@
-import React, { useEffect } from 'react';
-import { useForm } from 'react-hook-form';
-import { zodResolver } from '@hookform/resolvers/zod';
-import { toast } from 'sonner';
-
+import { useState } from 'react';
 import { authApi } from '@/lib/apis';
-import { type User } from '@/lib/types/user';
-import { profileSchema, type ProfileFormData } from '@/lib/validations/profile';
+import { toast } from 'sonner';
+import type { User } from '@/lib/types/user';
 
 export function useProfileForm() {
-  const [user, setUser] = React.useState<User | null>(null);
-  const [isLoading, setIsLoading] = React.useState(true);
+  const [isLoading, setIsLoading] = useState(false);
 
-  const {
-    register,
-    handleSubmit,
-    reset,
-    formState: { errors, isSubmitting, isDirty },
-  } = useForm<ProfileFormData>({
-    resolver: zodResolver(profileSchema),
-  });
-
-  useEffect(() => {
-    const fetchUser = async () => {
-      try {
-        setIsLoading(true);
-        const response = await authApi.me();
-        if (response.success && response.data) {
-          setUser(response.data);
-          reset(response.data); // Populate form with user data
-        } else {
-          toast.error(response.message || 'Failed to fetch user profile.');
-        }
-      } catch (error: any) {
-        toast.error(error.message || 'An error occurred while fetching your profile.');
-      } finally {
-        setIsLoading(false);
-      }
-    };
-    fetchUser();
-  }, [reset]);
-
-  const onSubmit = async (data: ProfileFormData) => {
+  const updateProfile = async (data: Partial<User>) => {
+    setIsLoading(true);
     try {
       const response = await authApi.updateProfile(data);
-      if (response.success && response.data) {
-        toast.success('Profile updated successfully!');
-        setUser(response.data);
-        reset(response.data); // Reset form with new data to clear isDirty state
+      
+      if (response.success) {
+        toast.success('Profile updated successfully');
+        return true;
       } else {
-        toast.error(response.message || 'Failed to update profile.');
+        toast.error(response.message || 'Failed to update profile');
+        return false;
       }
     } catch (error: any) {
-      toast.error(error.message || 'An error occurred while updating your profile.');
+      toast.error(error.message || 'Failed to update profile');
+      return false;
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const deleteAccount = async () => {
+    setIsLoading(true);
+    try {
+      const response = await authApi.deleteAccount();
+      
+      if (response.success) {
+        toast.success('Account deleted successfully');
+        return true;
+      } else {
+        toast.error(response.message || 'Failed to delete account');
+        return false;
+      }
+    } catch (error: any) {
+      toast.error(error.message || 'Failed to delete account');
+      return false;
+    } finally {
+      setIsLoading(false);
     }
   };
 
   return {
-    user,
-    isLoading,
-    register,
-    handleSubmit: handleSubmit(onSubmit),
-    errors,
-    isSubmitting,
-    isDirty,
+    updateProfile,
+    deleteAccount,
+    isLoading
   };
 }
+

@@ -9,14 +9,12 @@ export function DashboardSidebar({ activeSection, onSectionChange, userType = 'c
     { id: 'profile', label: 'Profile', component: 'ProfileSection' },
     { id: 'bookings', label: 'My Bookings', component: 'BookingsSection' },
     { id: 'new-booking', label: 'Book Service', component: 'NewBookingSection' },
-    { id: 'details', label: 'Account Details', component: 'DetailsSection' },
   ];
 
   const providerMenuItems = [
     { id: 'profile', label: 'Profile', component: 'ProfileSection' },
     { id: 'all-services', label: 'Available Tasks', component: 'AllServicesSection' },
     { id: 'services', label: 'My Services', component: 'ServicesSection' },
-    { id: 'details', label: 'Account Details', component: 'DetailsSection' },
   ];
 
   const menuItems = userType === 'customer' ? customerMenuItems : providerMenuItems;

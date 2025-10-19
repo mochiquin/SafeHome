@@ -9,7 +9,6 @@ import { BookingsSection } from "./bookings";
 import { ServicesSection } from "./services";
 import { AllServicesSection } from "./all-services";
 import { NewBookingSection } from "./new-booking";
-import { DetailsSection } from "./details";
 
 interface DashboardContainerProps {
   userType?: 'customer' | 'provider';
@@ -39,8 +38,6 @@ export function DashboardContainer({ userType = 'customer' }: DashboardContainer
     switch (activeSection) {
       case "profile":
         return <ProfileSection />;
-      case "details":
-        return <DetailsSection />;
       case "bookings":
         return userType === 'customer' ? <BookingsSection /> : <ServicesSection />;
       case "new-booking":

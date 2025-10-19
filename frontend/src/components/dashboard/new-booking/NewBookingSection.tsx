@@ -5,16 +5,20 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { Separator } from "@/components/ui/separator";
-import { Calendar, Clock, DollarSign, MapPin, FileText, Send } from "lucide-react";
+import { Calendar, Clock, DollarSign, MapPin, FileText, Send, Search } from "lucide-react";
 import { useNewBooking } from "@/hooks/use-new-booking";
 import type { ServiceType } from "@/lib/types/booking";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { bookingSchema, type BookingFormData } from "@/lib/validations/booking";
 import { toast } from "sonner";
+import { CovidBanner } from "@/components/covid/CovidBanner";
+import { SimpleMap } from "@/components/maps";
+import { useState } from "react";
 
 export function NewBookingSection() {
   const { createBooking, isSubmitting } = useNewBooking();
+  const [searchLocation, setSearchLocation] = useState('');
   
   const {
     register,
@@ -40,6 +44,68 @@ export function NewBookingSection() {
 
   const serviceType = watch('service_type');
   const duration = watch('duration');
+  const city = watch('city');
+  const address = watch('address');
+
+  // Handle search button click - Auto-fill city from address
+  const handleSearch = async () => {
+    if (!address) {
+      toast.error('Please enter an address');
+      return;
+    }
+
+    try {
+      toast.info('Searching location...');
+
+      // Use Google Maps Geocoding API to get city from address
+      const apiKey = process.env.NEXT_PUBLIC_GOOGLE_MAPS_KEY;
+      if (!apiKey) {
+        toast.error('Google Maps API key not configured');
+        return;
+      }
+
+      const response = await fetch(
+        `https://maps.googleapis.com/maps/api/geocode/json?address=${encodeURIComponent(address)}&key=${apiKey}`
+      );
+      const data = await response.json();
+
+      if (data.status === 'OK' && data.results && data.results[0]) {
+        const result = data.results[0];
+        
+        // Extract city from address components
+        let cityName = '';
+        for (const component of result.address_components) {
+          if (component.types.includes('locality')) {
+            cityName = component.long_name;
+            break;
+          }
+          // Fallback to administrative_area_level_2 if locality not found
+          if (component.types.includes('administrative_area_level_2') && !cityName) {
+            cityName = component.long_name;
+          }
+        }
+
+        if (cityName) {
+          // Auto-fill city field
+          setValue('city', cityName);
+          toast.success(`City detected: ${cityName}`);
+          
+          // Set search location for map
+          const searchQuery = `${address}, ${cityName}`;
+          setSearchLocation(searchQuery);
+        } else {
+          toast.warning('Could not detect city from address');
+          const searchQuery = city ? `${address}, ${city}` : address;
+          setSearchLocation(searchQuery);
+        }
+      } else {
+        toast.error('Could not find location. Please check the address.');
+      }
+    } catch (error) {
+      console.error('Geocoding error:', error);
+      toast.error('Failed to search location');
+    }
+  };
 
   const onSubmit = async (data: BookingFormData) => {
     try {
@@ -89,9 +155,9 @@ export function NewBookingSection() {
 
       <Card>
         <CardContent className="space-y-6 p-6">
-        <form onSubmit={handleSubmit(onSubmit)}>
-        <div className="space-y-6">
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <form onSubmit={handleSubmit(onSubmit)}>
+            <div className="space-y-6">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           <div className="space-y-2">
             <Label htmlFor="service" className="text-sm font-medium">
               Service Type *
@@ -212,21 +278,36 @@ export function NewBookingSection() {
             Service Location
           </Label>
           <div className="space-y-4">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label htmlFor="address" className="text-sm font-medium">
-                  Address *
-                </Label>
+            {/* Address input with Search button */}
+            <div className="space-y-2">
+              <Label htmlFor="address" className="text-sm font-medium">
+                Address *
+              </Label>
+              <div className="flex gap-2">
                 <Input
                   id="address"
                   placeholder="Enter your full address"
-                  className={errors.address ? "border-red-500" : ""}
+                  className={`flex-1 ${errors.address ? "border-red-500" : ""}`}
                   {...register('address')}
                 />
-                {errors.address && (
-                  <p className="text-sm text-red-500">{errors.address.message}</p>
-                )}
+                <Button
+                  type="button"
+                  variant="default"
+                  onClick={handleSearch}
+                  disabled={isSubmitting || !address}
+                  className="shrink-0 bg-blue-600 hover:bg-blue-700"
+                >
+                  <Search className="h-4 w-4 mr-2" />
+                  Search
+                </Button>
               </div>
+              {errors.address && (
+                <p className="text-sm text-red-500">{errors.address.message}</p>
+              )}
+            </div>
+
+            {/* City and Phone in one row */}
+            <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label htmlFor="city" className="text-sm font-medium">
                   City *
@@ -241,6 +322,7 @@ export function NewBookingSection() {
                   <p className="text-sm text-red-500">{errors.city.message}</p>
                 )}
               </div>
+
               <div className="space-y-2">
                 <Label htmlFor="phone" className="text-sm font-medium">
                   Phone Number *
@@ -258,32 +340,45 @@ export function NewBookingSection() {
               </div>
             </div>
 
-            {/* Map Placeholder */}
+            {/* COVID Restriction Banner - Only show when city is entered */}
+            {city && city.trim().length > 0 && (
+              <div className="mt-4">
+                <CovidBanner country="AU" city={city.trim().replace(/\/+$/, '')} />
+              </div>
+            )}
+
+            {/* Google Map - Use searchLocation if search was clicked */}
             <div className="space-y-2">
               <Label className="text-sm font-medium text-muted-foreground">
                 Location on Map
               </Label>
-              <div className="w-full h-48 bg-muted/30 border-2 border-dashed border-muted-foreground/25 rounded-lg flex items-center justify-center">
-                <div className="text-center text-muted-foreground">
-                  <MapPin className="h-8 w-8 mx-auto mb-2 opacity-50" />
-                  <p className="text-sm">Map integration coming soon</p>
-                  <p className="text-xs">Your selected location will be displayed here</p>
+              {searchLocation ? (
+                <SimpleMap 
+                  address={searchLocation} 
+                  height="300px" 
+                />
+              ) : (
+                <div className="w-full h-[300px] bg-muted/30 border-2 border-dashed border-muted-foreground/25 rounded-lg flex items-center justify-center">
+                  <div className="text-center text-muted-foreground">
+                    <MapPin className="h-8 w-8 mx-auto mb-2 opacity-50" />
+                    <p className="text-sm">Enter address and click Search to view map</p>
+                  </div>
                 </div>
-              </div>
+              )}
             </div>
           </div>
         </div>
 
-        <div className="flex justify-end pt-6">
-          <Button type="submit" disabled={isSubmitting}>
-            <Send className="h-4 w-4 mr-2" />
-            {isSubmitting ? 'Creating...' : 'Create Booking'}
-          </Button>
-        </div>
-        </div>
-        </form>
-      </CardContent>
-    </Card>
+              <div className="flex justify-end pt-6">
+                <Button type="submit" disabled={isSubmitting}>
+                  <Send className="h-4 w-4 mr-2" />
+                  {isSubmitting ? 'Creating...' : 'Create Booking'}
+                </Button>
+              </div>
+            </div>
+          </form>
+        </CardContent>
+      </Card>
     </div>
   );
 }

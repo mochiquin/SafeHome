@@ -14,4 +14,3 @@ export { BookingsSection } from "./bookings";
 export { ServicesSection } from "./services";
 export { AllServicesSection } from "./all-services";
 export { NewBookingSection } from "./new-booking";
-export { DetailsSection } from "./details";
