@@ -26,14 +26,17 @@ class BookingCreateSerializer(serializers.ModelSerializer):
     class Meta:
         model = Booking
         fields = [
-            'service', 'address', 'phone', 'city', 'state', 'country',
+            'service_type', 'budget', 'address', 'phone', 'city', 'state', 'country',
             'start_time', 'duration_hours', 'notes'
         ]
         read_only_fields = ['user']
 
     def validate_start_time(self, value):
         """Validate that start time is not in the past"""
-        if value <= timezone.now():
+        # Allow some buffer for timezone differences (5 minutes)
+        from datetime import timedelta
+        min_time = timezone.now() - timedelta(minutes=5)
+        if value < min_time:
             raise serializers.ValidationError("Start time must be in the future")
         return value
 
@@ -66,12 +69,16 @@ class BookingDetailSerializer(serializers.ModelSerializer):
     """
     address = serializers.SerializerMethodField()
     phone = serializers.SerializerMethodField()
+    service_type_display = serializers.CharField(source='get_service_type_display', read_only=True)
+    user = serializers.SerializerMethodField()
+    provider = serializers.SerializerMethodField()
 
     class Meta:
         model = Booking
         fields = [
-            'id', 'service', 'address', 'phone', 'city', 'state', 'country',
-            'start_time', 'duration_hours', 'status', 'notes', 'created_at', 'updated_at'
+            'id', 'user', 'provider', 'service_type', 'service_type_display', 'budget',
+            'address', 'phone', 'city', 'state', 'country', 'start_time', 'duration_hours', 
+            'status', 'notes', 'created_at', 'updated_at'
         ]
         read_only_fields = ['id', 'created_at', 'updated_at']
 
@@ -82,16 +89,40 @@ class BookingDetailSerializer(serializers.ModelSerializer):
     def get_phone(self, obj) -> str:
         """Decrypt and return phone"""
         return obj.get_phone()
+    
+    def get_user(self, obj):
+        """Return user information"""
+        if obj.user:
+            return {
+                'id': obj.user.id,
+                'email': obj.user.email,
+                'first_name': obj.user.first_name,
+                'last_name': obj.user.last_name,
+            }
+        return None
+    
+    def get_provider(self, obj):
+        """Return provider information"""
+        if obj.provider:
+            return {
+                'id': obj.provider.id,
+                'email': obj.provider.email,
+                'first_name': obj.provider.first_name,
+                'last_name': obj.provider.last_name,
+            }
+        return None
 
 
 class BookingListSerializer(serializers.ModelSerializer):
     """
     Serializer for listing bookings (without sensitive data)
     """
+    service_type_display = serializers.CharField(source='get_service_type_display', read_only=True)
+    
     class Meta:
         model = Booking
         fields = [
-            'id', 'service', 'city', 'state', 'country',
+            'id', 'service_type', 'service_type_display', 'city', 'state', 'country',
             'start_time', 'duration_hours', 'status', 'created_at'
         ]
         read_only_fields = ['id', 'created_at']

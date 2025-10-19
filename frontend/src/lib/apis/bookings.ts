@@ -17,14 +17,14 @@ export class BookingsApiClient extends BaseApiClient {
    * Create a new booking
    */
   async createBooking(data: CreateBookingRequest): Promise<ApiResponse<Booking>> {
-    return this.post<Booking>('/create', data)
+    return this.post<Booking>('/create/', data)
   }
 
   /**
    * Get user's bookings list
    */
-  async getBookings(params?: BookingListParams): Promise<PaginatedResponse<Booking>> {
-    return this.getPaginated<Booking>('/my-bookings', params)
+  async getBookings(params?: BookingListParams): Promise<ApiResponse<Booking[]>> {
+    return this.get<Booking[]>('/my-bookings/', { params })
   }
 
   /**
@@ -38,7 +38,7 @@ export class BookingsApiClient extends BaseApiClient {
    * Update booking
    */
   async updateBooking(id: string, data: UpdateBookingRequest): Promise<ApiResponse<Booking>> {
-    return this.patch<Booking>(`/${id}/update`, data)
+    return this.patch<Booking>(`/${id}`, data)
   }
 
   /**
@@ -46,6 +46,34 @@ export class BookingsApiClient extends BaseApiClient {
    */
   async getBookingStats(): Promise<ApiResponse<BookingStats>> {
     return this.get<BookingStats>('/stats')
+  }
+
+  /**
+   * Get all bookings for providers (Received Orders - bookings accepted by provider)
+   */
+  async getProviderBookings(): Promise<ApiResponse<Booking[]>> {
+    return this.get<Booking[]>('/provider/received/')
+  }
+
+  /**
+   * Get available tasks for providers (bookings without provider assigned)
+   */
+  async getAvailableTasks(): Promise<ApiResponse<Booking[]>> {
+    return this.get<Booking[]>('/provider/available/')
+  }
+
+  /**
+   * Accept a booking (provider accepts an available task)
+   */
+  async acceptBooking(bookingId: string): Promise<ApiResponse<Booking>> {
+    return this.patch<Booking>(`/${bookingId}/accept/`)
+  }
+
+  /**
+   * Cancel a booking (customer cancels their booking)
+   */
+  async cancelBooking(bookingId: string): Promise<ApiResponse<Booking>> {
+    return this.patch<Booking>(`/${bookingId}/cancel/`)
   }
 }
 

@@ -4,7 +4,11 @@ from .views import (
     BookingListView,
     BookingDetailView,
     BookingUpdateView,
-    user_booking_stats
+    CancelBookingView,
+    user_booking_stats,
+    ProviderBookingListView,
+    AvailableTasksListView,
+    AcceptBookingView
 )
 
 urlpatterns = [
@@ -14,6 +18,15 @@ urlpatterns = [
     # List user's bookings
     path('my-bookings/', BookingListView.as_view(), name='booking-list'),
 
+    # Provider's view of accepted bookings (Received Orders)
+    path('provider/received/', ProviderBookingListView.as_view(), name='provider-bookings'),
+
+    # Provider's view of available tasks (bookings without provider)
+    path('provider/available/', AvailableTasksListView.as_view(), name='available-tasks'),
+
+    # Provider accepts a booking
+    path('<uuid:pk>/accept/', AcceptBookingView.as_view(), name='accept-booking'),
+
     # Booking statistics
     path('stats/', user_booking_stats, name='booking-stats'),
 
@@ -22,4 +35,7 @@ urlpatterns = [
 
     # Update booking
     path('<uuid:pk>/update/', BookingUpdateView.as_view(), name='booking-update'),
+    
+    # Cancel booking
+    path('<uuid:pk>/cancel/', CancelBookingView.as_view(), name='booking-cancel'),
 ]

@@ -4,12 +4,35 @@
 export type BookingStatus = 'pending' | 'confirmed' | 'in_progress' | 'completed' | 'cancelled'
 
 /**
+ * Service type enum
+ */
+export type ServiceType = 
+  | 'cleaning'
+  | 'plumbing'
+  | 'electrical'
+  | 'gardening'
+  | 'other'
+
+/**
  * Booking model interface
  */
 export interface Booking {
   id: string // UUID in backend
-  user: string // User ID
-  service: string // Service ID
+  user?: {
+    id: number
+    email: string
+    first_name?: string
+    last_name?: string
+  }
+  provider?: {
+    id: number
+    email: string
+    first_name?: string
+    last_name?: string
+  } | null
+  service_type: ServiceType // Service type (enum)
+  service_type_display?: string // Human-readable service type
+  budget?: number // Customer budget
   city: string
   state?: string
   country: string
@@ -28,7 +51,8 @@ export interface Booking {
  * Create booking request interface
  */
 export interface CreateBookingRequest {
-  service_id: string
+  service_type: ServiceType
+  budget?: number
   address: string
   phone: string
   city: string
@@ -59,7 +83,7 @@ export interface BookingListParams {
   page?: number
   page_size?: number
   status?: BookingStatus
-  service_id?: string
+  service_type?: ServiceType
 }
 
 /**

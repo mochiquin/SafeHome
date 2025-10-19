@@ -1,66 +1,84 @@
 import api from '../axios'
-import type { ApiResponse, RequestConfig, PaginatedResponse } from '../types/common'
+import { type AxiosRequestConfig } from 'axios'
+import type { ApiResponse } from '../types'
+import { getErrorMessage } from '../utils'
+import { enc } from '../crypto'
+
+interface RequestConfig extends AxiosRequestConfig {
+  // We can add custom config fields here if needed
+}
 
 export class BaseApiClient {
-  protected baseURL: string
+  private client
+  private basePath: string
 
-  constructor(baseURL: string = '') {
-    this.baseURL = baseURL
+  constructor(basePath: string = '') {
+    this.client = api
+    this.basePath = basePath
+  }
+
+  private _getEndpoint(endpoint: string): string {
+    const path = [this.basePath, endpoint].join('/').replace(/\/+/g, '/');
+    return path.endsWith('/') ? path : `${path}/`;
   }
 
   protected async request<T = any>(config: RequestConfig): Promise<ApiResponse<T>> {
     try {
-      const response = await api.request<ApiResponse<T>>({
-        method: config.method || 'GET',
-        url: this.baseURL + config.url,
-        data: config.data,
-        params: config.params,
-        headers: config.headers,
-      })
+      let dataToSend = config.data;
 
-      return response.data
-    } catch (error: any) {
-      // If server returned error response, throw response data
-      if (error.response?.data) {
-        throw error.response.data
+      // Encrypt the body for POST, PUT, and PATCH requests
+      if (['POST', 'PUT', 'PATCH'].includes(config.method?.toUpperCase() || '') && dataToSend) {
+        const encryptedPayload = await enc(JSON.stringify(dataToSend));
+        dataToSend = { payload: encryptedPayload };
       }
-      // Otherwise throw generic error
+
+      const response = await this.client.request<ApiResponse<T>>({
+        ...config,
+        url: this._getEndpoint(config.url || ''),
+        data: dataToSend,
+      });
+
+      if (response.data && response.data.success) {
+        return {
+          success: true,
+          data: response.data.data,
+          message: response.data.message,
+        };
+      } else {
+        console.error('API response error:', response.data);
+        throw new Error(response.data?.message || 'An unknown error occurred');
+      }
+    } catch (error: any) {
+      const message = getErrorMessage(error);
+      console.error('API request error:', message);
+      console.error('Error details:', error);
+      console.error('Response data:', error.response?.data);
+      // Re-throw a structured error
       throw {
         success: false,
-        message: error.message || 'Network error',
-        status_code: 0,
-      }
+        message: message,
+        data: error.response?.data?.data,
+      };
     }
   }
 
-  protected async get<T = any>(url: string, params?: Record<string, any>): Promise<ApiResponse<T>> {
-    return this.request<T>({ method: 'GET', url, params })
+  protected async get<T>(endpoint: string, config: Omit<RequestConfig, 'method' | 'url'> = {}): Promise<ApiResponse<T>> {
+    return this.request<T>({ ...config, method: 'GET', url: endpoint });
   }
 
-  protected async post<T = any>(url: string, data?: any): Promise<ApiResponse<T>> {
-    return this.request<T>({ method: 'POST', url, data })
+  protected async post<T>(endpoint: string, data?: any, config: Omit<RequestConfig, 'method' | 'url' | 'data'> = {}): Promise<ApiResponse<T>> {
+    return this.request<T>({ ...config, method: 'POST', url: endpoint, data });
   }
 
-  protected async put<T = any>(url: string, data?: any): Promise<ApiResponse<T>> {
-    return this.request<T>({ method: 'PUT', url, data })
+  protected async put<T>(endpoint: string, data?: any, config: Omit<RequestConfig, 'method' | 'url' | 'data'> = {}): Promise<ApiResponse<T>> {
+    return this.request<T>({ ...config, method: 'PUT', url: endpoint, data });
   }
 
-  protected async patch<T = any>(url: string, data?: any): Promise<ApiResponse<T>> {
-    return this.request<T>({ method: 'PATCH', url, data })
+  protected async patch<T>(endpoint: string, data?: any, config: Omit<RequestConfig, 'method' | 'url' | 'data'> = {}): Promise<ApiResponse<T>> {
+    return this.request<T>({ ...config, method: 'PATCH', url: endpoint, data });
   }
 
-  protected async delete<T = any>(url: string): Promise<ApiResponse<T>> {
-    return this.request<T>({ method: 'DELETE', url })
-  }
-
-  protected async getPaginated<T = any>(
-    url: string,
-    params?: Record<string, any>
-  ): Promise<PaginatedResponse<T>> {
-    const response = await this.get<{ results: T[]; count: number; next?: string; previous?: string }>(
-      url,
-      params
-    )
-    return response as PaginatedResponse<T>
+  protected async delete<T>(endpoint: string, config: Omit<RequestConfig, 'method' | 'url'> = {}): Promise<ApiResponse<T>> {
+    return this.request<T>({ ...config, method: 'DELETE', url: endpoint });
   }
 }

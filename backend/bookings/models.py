@@ -11,7 +11,17 @@ class Booking(UUIDModel):
     """
     Model for service bookings with encrypted personal information
     """
-    # Foreign key to user
+    
+    # Service type choices
+    SERVICE_TYPES = [
+        ('cleaning', 'Home Cleaning'),
+        ('plumbing', 'Plumbing'),
+        ('electrical', 'Electrical'),
+        ('gardening', 'Gardening'),
+        ('other', 'Other'),
+    ]
+    
+    # Foreign key to user (customer)
     user = models.ForeignKey(
         settings.AUTH_USER_MODEL,
         on_delete=models.CASCADE,
@@ -19,12 +29,34 @@ class Booking(UUIDModel):
         verbose_name='User'
     )
 
-    # Foreign key to service
-    service = models.ForeignKey(
-        'services.Service',
-        on_delete=models.CASCADE,
-        related_name='bookings',
-        verbose_name='Service'
+    # Foreign key to provider (optional, null until a provider accepts the booking)
+    provider = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        related_name='accepted_bookings',
+        verbose_name='Provider',
+        null=True,
+        blank=True,
+        help_text='The provider who accepted this booking'
+    )
+
+    # Service type field (instead of foreign key)
+    service_type = models.CharField(
+        max_length=50,
+        choices=SERVICE_TYPES,
+        default='other',
+        verbose_name='Service Type',
+        help_text='Type of service requested'
+    )
+
+    # Budget/Price
+    budget = models.DecimalField(
+        max_digits=10,
+        decimal_places=2,
+        null=True,
+        blank=True,
+        verbose_name='Budget',
+        help_text='Customer budget for the service'
     )
 
     # Encrypted personal information
@@ -113,7 +145,7 @@ class Booking(UUIDModel):
         ]
 
     def __str__(self):
-        return f"Booking {self.id} - {self.user.email} - {self.service.title}"
+        return f"Booking {self.id} - {self.user.email} - {self.get_service_type_display()}"
 
     # Encryption/Decryption methods
     def set_address(self, address: str):

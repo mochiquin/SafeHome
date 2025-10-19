@@ -3,6 +3,7 @@ Views for the services app
 """
 from rest_framework import generics, status
 from rest_framework.response import Response
+from rest_framework.permissions import AllowAny
 from django.shortcuts import get_object_or_404
 from .models import Service
 from .serializers import ServiceSerializer, ServiceDetailSerializer
@@ -17,6 +18,7 @@ class ServiceListView(generics.ListAPIView):
     serializer_class = ServiceSerializer
     queryset = Service.objects.filter(is_active=True)
     pagination_class = None  # No pagination for simple list
+    permission_classes = [AllowAny]  # Allow unauthenticated access
 
 
 class ServiceDetailView(generics.RetrieveAPIView):
@@ -27,6 +29,7 @@ class ServiceDetailView(generics.RetrieveAPIView):
     """
     serializer_class = ServiceDetailSerializer
     queryset = Service.objects.filter(is_active=True)
+    permission_classes = [AllowAny]  # Allow unauthenticated access
 
     def get_object(self):
         """Get service object, return 404 if not found or inactive"""

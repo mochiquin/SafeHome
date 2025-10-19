@@ -167,6 +167,10 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
 # REST Framework settings
 REST_FRAMEWORK = {
+    'DEFAULT_PARSER_CLASSES': [
+        'core.parsers.EncryptedJSONParser',
+        'rest_framework.parsers.JSONParser',
+    ],
     'DEFAULT_AUTHENTICATION_CLASSES': [
         'accounts.authentication.JWTCookieAuthentication',
         'rest_framework_simplejwt.authentication.JWTAuthentication',
@@ -187,7 +191,13 @@ SIMPLE_JWT = {
 }
 
 # CORS settings
-CORS_ALLOWED_ORIGINS = env('DJANGO_CORS_ALLOWED_ORIGINS').split(',') if env('DJANGO_CORS_ALLOWED_ORIGINS') else []
+CORS_ALLOWED_ORIGINS = env('DJANGO_CORS_ALLOWED_ORIGINS').split(',') if env('DJANGO_CORS_ALLOWED_ORIGINS') else [
+    'http://localhost:3000',
+    'http://localhost:3001',  # Added for when port 3000 is in use
+    'http://127.0.0.1:3000',
+    'http://127.0.0.1:3001',
+]
+CORS_ALLOW_CREDENTIALS = True
 
 # Custom User model
 AUTH_USER_MODEL = 'accounts.User'
