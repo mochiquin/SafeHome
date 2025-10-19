@@ -1,9 +1,23 @@
+import { useState } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
 import { MapPin, Clock, DollarSign, User, Calendar, Phone, Home } from "lucide-react";
 import { useRouter } from "next/navigation";
+import { bookingsApi } from "@/lib/apis";
+import { toast } from "sonner";
 
 interface BookingCardProps {
   id: string;
@@ -16,9 +30,11 @@ interface BookingCardProps {
   address: string;
   phone: string;
   status: 'confirmed' | 'completed' | 'pending' | 'cancelled';
+  onStatusChange?: () => void;
 }
 
 export const BookingCard = ({
+  id,
   serviceName,
   serviceType,
   provider,
@@ -27,9 +43,11 @@ export const BookingCard = ({
   price,
   address,
   phone,
-  status
+  status,
+  onStatusChange
 }: BookingCardProps) => {
   const router = useRouter();
+  const [isCancelling, setIsCancelling] = useState(false);
 
   const statusColors = {
     confirmed: "bg-blue-100 text-blue-800 border-blue-200",
@@ -46,7 +64,27 @@ export const BookingCard = ({
   };
 
   const handleViewDetails = () => {
-    router.push(`/dashboard/services?id=${id}&view=customer`);
+    console.log('Navigating to booking detail:', id);
+    router.push(`/dashboard/booking/${id}`);
+  };
+
+  const handleCancelBooking = async () => {
+    setIsCancelling(true);
+    try {
+      const response = await bookingsApi.cancelBooking(id);
+      if (response.success) {
+        toast.success('Booking cancelled successfully');
+        if (onStatusChange) {
+          onStatusChange();
+        }
+      } else {
+        throw new Error(response.message || 'Failed to cancel booking');
+      }
+    } catch (error: any) {
+      toast.error(error.message || 'Failed to cancel booking');
+    } finally {
+      setIsCancelling(false);
+    }
   };
 
   return (
@@ -117,15 +155,31 @@ export const BookingCard = ({
           <Button size="sm" variant="outline" onClick={handleViewDetails}>
             View Details
           </Button>
-          {status === 'confirmed' && (
-            <Button size="sm" variant="outline">
-              Reschedule
-            </Button>
-          )}
-          {status === 'confirmed' && (
-            <Button size="sm" variant="destructive">
-              Cancel
-            </Button>
+          {(status === 'confirmed' || status === 'pending') && (
+            <AlertDialog>
+              <AlertDialogTrigger asChild>
+                <Button size="sm" variant="destructive" disabled={isCancelling}>
+                  {isCancelling ? 'Cancelling...' : 'Cancel Booking'}
+                </Button>
+              </AlertDialogTrigger>
+              <AlertDialogContent>
+                <AlertDialogHeader>
+                  <AlertDialogTitle>Cancel Booking</AlertDialogTitle>
+                  <AlertDialogDescription>
+                    Are you sure you want to cancel this booking? This action cannot be undone.
+                  </AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter>
+                  <AlertDialogCancel>No, Keep It</AlertDialogCancel>
+                  <AlertDialogAction
+                    onClick={handleCancelBooking}
+                    className="bg-red-600 hover:bg-red-700"
+                  >
+                    Yes, Cancel Booking
+                  </AlertDialogAction>
+                </AlertDialogFooter>
+              </AlertDialogContent>
+            </AlertDialog>
           )}
         </div>
       </CardContent>

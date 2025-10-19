@@ -1,6 +1,7 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import { DashboardHeader } from "./DashboardHeader";
 import { DashboardSidebar } from "./DashboardSidebar";
 import { ProfileSection } from "./profile";
@@ -15,7 +16,24 @@ interface DashboardContainerProps {
 }
 
 export function DashboardContainer({ userType = 'customer' }: DashboardContainerProps) {
-  const [activeSection, setActiveSection] = useState("profile");
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  const tabFromUrl = searchParams.get('tab');
+  const [activeSection, setActiveSection] = useState(tabFromUrl || "profile");
+
+  // Sync URL with active section
+  useEffect(() => {
+    const currentTab = searchParams.get('tab');
+    if (currentTab && currentTab !== activeSection) {
+      setActiveSection(currentTab);
+    }
+  }, [searchParams, activeSection]);
+
+  // Update URL when tab changes
+  const handleSectionChange = (section: string) => {
+    setActiveSection(section);
+    router.push(`/dashboard/${userType}?tab=${section}`, { scroll: false });
+  };
 
   const renderSection = () => {
     switch (activeSection) {
@@ -44,7 +62,7 @@ export function DashboardContainer({ userType = 'customer' }: DashboardContainer
         <div className="flex flex-col md:flex-row">
           <DashboardSidebar
             activeSection={activeSection}
-            onSectionChange={setActiveSection}
+            onSectionChange={handleSectionChange}
             userType={userType}
           />
 

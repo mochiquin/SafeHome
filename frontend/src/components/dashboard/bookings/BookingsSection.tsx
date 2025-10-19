@@ -12,6 +12,8 @@ import {
   PaginationPrevious,
 } from "@/components/ui/pagination";
 import { BookingCard } from "./BookingCard";
+import { useUserBookings } from "@/hooks/use-user-bookings";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 
 interface BookingCardProps {
   id: string;
@@ -27,82 +29,53 @@ interface BookingCardProps {
 }
 
 export function BookingsSection() {
-  const bookings: BookingCardProps[] = [
-    {
-      id: "1",
-      serviceName: "Professional Home Cleaning",
-      serviceType: "Deep Clean Service",
-      provider: "CleanPro Services",
-      date: "Dec 15, 2024",
-      time: "10:00 AM - 12:00 PM",
-      price: "$120.00",
-      address: "123 Collins Street, Melbourne VIC 3000",
-      phone: "+61 3 1234 5678",
-      status: "confirmed"
-    },
-    {
-      id: "2",
-      serviceName: "Plumbing Repair",
-      serviceType: "Emergency Plumbing",
-      provider: "QuickFix Plumbing",
-      date: "Dec 10, 2024",
-      time: "2:00 PM - 4:00 PM",
-      price: "$85.00",
-      address: "456 Swanston Street, Carlton VIC 3053",
-      phone: "+61 3 9876 5432",
-      status: "completed"
-    },
-    {
-      id: "3",
-      serviceName: "Electrical Inspection",
-      serviceType: "Safety Inspection",
-      provider: "SafeElectric",
-      date: "Dec 20, 2024",
-      time: "9:00 AM - 11:00 AM",
-      price: "$95.00",
-      address: "789 Lygon Street, Brunswick VIC 3056",
-      phone: "+61 3 5555 1234",
-      status: "pending"
-    },
-    {
-      id: "4",
-      serviceName: "Garden Maintenance",
-      serviceType: "Lawn Mowing",
-      provider: "GreenThumb Gardening",
-      date: "Dec 18, 2024",
-      time: "8:00 AM - 10:00 AM",
-      price: "$65.00",
-      address: "321 Smith Street, Fitzroy VIC 3065",
-      phone: "+61 3 4444 5678",
-      status: "confirmed"
-    },
-    {
-      id: "5",
-      serviceName: "House Painting",
-      serviceType: "Interior Painting",
-      provider: "ColorMasters",
-      date: "Dec 22, 2024",
-      time: "9:00 AM - 5:00 PM",
-      price: "$450.00",
-      address: "654 Chapel Street, South Yarra VIC 3141",
-      phone: "+61 3 7777 8901",
-      status: "pending"
-    },
-    {
-      id: "6",
-      serviceName: "Carpet Cleaning",
-      serviceType: "Deep Steam Clean",
-      provider: "FreshClean",
-      date: "Dec 8, 2024",
-      time: "11:00 AM - 1:00 PM",
-      price: "$110.00",
-      address: "987 High Street, Armadale VIC 3143",
-      phone: "+61 3 2222 3344",
-      status: "completed"
-    }
-  ];
-
+  const { bookings: apiBookings, isLoading, error, refetch } = useUserBookings();
   const [currentPage, setCurrentPage] = useState(1);
+  
+  // Transform API bookings to BookingCardProps format
+  const bookings: BookingCardProps[] = apiBookings.map(booking => {
+    const startDate = new Date(booking.start_time);
+    const endDate = new Date(startDate.getTime() + booking.duration_hours * 60 * 60 * 1000);
+    
+    return {
+      id: booking.id,
+      serviceName: booking.service_type_display || booking.service_type,
+      serviceType: booking.service_type_display || booking.service_type,
+      provider: booking.provider 
+        ? `${booking.provider.first_name || ''} ${booking.provider.last_name || ''}`.trim() || booking.provider.email
+        : 'Waiting for provider',
+      date: startDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }),
+      time: `${startDate.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })} - ${endDate.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })}`,
+      price: booking.budget ? `$${Number(booking.budget).toFixed(2)}` : 'TBD',
+      address: booking.address || 'N/A',
+      phone: booking.phone || 'N/A',
+      status: booking.status as 'confirmed' | 'completed' | 'pending' | 'cancelled'
+    };
+  });
+
+  if (isLoading) {
+    return (
+      <Card>
+        <CardHeader>
+          <CardTitle>My Bookings</CardTitle>
+          <CardDescription>Loading your bookings...</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <p>Loading...</p>
+        </CardContent>
+      </Card>
+    );
+  }
+
+  if (error) {
+    return (
+      <Alert variant="destructive">
+        <AlertTitle>Error</AlertTitle>
+        <AlertDescription>{error}</AlertDescription>
+        <Button onClick={() => refetch()} className="mt-4">Try Again</Button>
+      </Alert>
+    );
+  }
   const itemsPerPage = 3;
 
   const totalPages = Math.ceil(bookings.length / itemsPerPage);
@@ -154,11 +127,22 @@ export function BookingsSection() {
         </CardHeader>
       </Card>
 
-      <div className="grid gap-6">
-        {currentBookings.map((booking) => (
-          <BookingCard key={booking.id} {...booking} />
-        ))}
-      </div>
+      {bookings.length === 0 ? (
+        <Card>
+          <CardContent className="pt-6">
+            <div className="text-center">
+              <h3 className="text-xl font-semibold">No bookings yet</h3>
+              <p className="text-muted-foreground mt-2">You haven't created any service bookings yet.</p>
+            </div>
+          </CardContent>
+        </Card>
+      ) : (
+        <>
+          <div className="grid gap-6">
+            {currentBookings.map((booking) => (
+              <BookingCard key={booking.id} {...booking} onStatusChange={refetch} />
+            ))}
+          </div>
 
       {/* Pagination */}
       {totalPages > 1 && (
@@ -201,9 +185,11 @@ export function BookingsSection() {
         </div>
       )}
 
-      <div className="text-center text-sm text-muted-foreground">
-        Showing {startIndex + 1}-{Math.min(endIndex, bookings.length)} of {bookings.length} bookings
-      </div>
+          <div className="text-center text-sm text-muted-foreground">
+            Showing {startIndex + 1}-{Math.min(endIndex, bookings.length)} of {bookings.length} bookings
+          </div>
+        </>
+      )}
     </div>
   );
 }
