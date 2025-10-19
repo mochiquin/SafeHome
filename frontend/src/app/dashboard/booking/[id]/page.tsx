@@ -20,6 +20,7 @@ import {
 import { bookingsApi } from "@/lib/apis";
 import type { Booking } from "@/lib/types/booking";
 import { toast } from "sonner";
+import { SimpleMap } from "@/components/maps";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -200,7 +201,7 @@ export default function BookingDetailPage() {
               <MapPin className="h-5 w-5" />
               Location
             </h3>
-            <div className="space-y-2">
+            <div className="space-y-4">
               <div>
                 <p className="text-sm text-muted-foreground">Address</p>
                 <p className="font-medium">{booking.address}</p>
@@ -220,6 +221,15 @@ export default function BookingDetailPage() {
                   <p className="text-sm text-muted-foreground">Country</p>
                   <p className="font-medium">{booking.country}</p>
                 </div>
+              </div>
+              
+              {/* Map Display */}
+              <div className="mt-4">
+                <p className="text-sm text-muted-foreground mb-2">Map</p>
+                <SimpleMap
+                  address={booking.address ? `${booking.address}, ${booking.city || ''}` : booking.city}
+                  height="250px"
+                />
               </div>
             </div>
           </div>

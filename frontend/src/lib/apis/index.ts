@@ -3,6 +3,7 @@ export * from './auth'
 export * from './bookings'
 export * from './services'
 export { paymentsApi } from './payments'
+export { covidApi } from './covid'
 
 // 导出类型
 export type * from '../types/api'
