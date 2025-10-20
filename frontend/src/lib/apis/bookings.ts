@@ -75,6 +75,13 @@ export class BookingsApiClient extends BaseApiClient {
   async cancelBooking(bookingId: string): Promise<ApiResponse<Booking>> {
     return this.patch<Booking>(`/${bookingId}/cancel/`)
   }
+
+  /**
+   * Start a job (provider starts a confirmed booking)
+   */
+  async startJob(bookingId: string): Promise<ApiResponse<Booking>> {
+    return this.patch<Booking>(`/${bookingId}/start/`)
+  }
 }
 
 // Export singleton instance

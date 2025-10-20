@@ -8,7 +8,8 @@ from .views import (
     user_booking_stats,
     ProviderBookingListView,
     AvailableTasksListView,
-    AcceptBookingView
+    AcceptBookingView,
+    StartJobView
 )
 
 urlpatterns = [
@@ -26,6 +27,9 @@ urlpatterns = [
 
     # Provider accepts a booking
     path('<uuid:pk>/accept/', AcceptBookingView.as_view(), name='accept-booking'),
+
+    # Provider starts a job
+    path('<uuid:pk>/start/', StartJobView.as_view(), name='start-job'),
 
     # Booking statistics
     path('stats/', user_booking_stats, name='booking-stats'),

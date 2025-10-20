@@ -258,34 +258,76 @@ class AcceptBookingView(generics.UpdateAPIView):
     """
     from accounts.authentication import JWTCookieAuthentication
     from accounts.views import IsProvider
-    
+
     serializer_class = BookingDetailSerializer
     authentication_classes = [JWTCookieAuthentication]
     permission_classes = [permissions.IsAuthenticated, IsProvider]
-    
+
     def get_object(self):
         """Get booking if it's available (no provider assigned)"""
         booking_id = self.kwargs['pk']
         booking = get_object_or_404(Booking, id=booking_id)
-        
+
         # Check if booking is available
         if booking.provider is not None:
             from rest_framework.exceptions import ValidationError
             raise ValidationError("This booking has already been accepted by another provider")
-        
+
         return booking
-    
+
     def update(self, request, *args, **kwargs):
         """Accept the booking by assigning current provider"""
         booking = self.get_object()
-        
+
         # Assign provider and update status
         booking.provider = request.user
         booking.status = 'confirmed'
         booking.save()
-        
+
         serializer = self.get_serializer(booking)
         return success_response(
             data=serializer.data,
             message='Booking accepted successfully'
+        )
+
+
+class StartJobView(generics.UpdateAPIView):
+    """
+    Start a job (change status from confirmed to in_progress)
+    Provider only
+    """
+    from accounts.authentication import JWTCookieAuthentication
+    from accounts.views import IsProvider
+
+    serializer_class = BookingDetailSerializer
+    authentication_classes = [JWTCookieAuthentication]
+    permission_classes = [permissions.IsAuthenticated, IsProvider]
+
+    def get_object(self):
+        """Get booking if it belongs to the provider and is confirmed"""
+        booking_id = self.kwargs['pk']
+        booking = get_object_or_404(Booking, id=booking_id)
+
+        # Check if booking belongs to this provider
+        if booking.provider != self.request.user:
+            from rest_framework.exceptions import NotFound
+            raise NotFound("Booking not found")
+
+        # Check if booking status is confirmed
+        if booking.status != 'confirmed':
+            from rest_framework.exceptions import ValidationError
+            raise ValidationError(f"Cannot start job. Current status is {booking.status}")
+
+        return booking
+
+    def update(self, request, *args, **kwargs):
+        """Start the job by changing status to in_progress"""
+        booking = self.get_object()
+        booking.status = 'in_progress'
+        booking.save()
+
+        serializer = self.get_serializer(booking)
+        return success_response(
+            data=serializer.data,
+            message='Job started successfully'
         )

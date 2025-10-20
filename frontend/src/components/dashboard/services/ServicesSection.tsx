@@ -70,7 +70,11 @@ export function ServicesSection() {
         <>
           <div className="grid gap-6">
             {currentBookings.map((booking) => (
-              <ReceivedOrderCard key={booking.id} booking={booking} />
+              <ReceivedOrderCard
+                key={booking.id}
+                booking={booking}
+                onJobStarted={refetch}
+              />
             ))}
           </div>
 
