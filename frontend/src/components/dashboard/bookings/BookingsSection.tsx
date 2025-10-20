@@ -25,7 +25,7 @@ interface BookingCardProps {
   price: string;
   address: string;
   phone: string;
-  status: 'confirmed' | 'completed' | 'pending' | 'cancelled';
+  status: 'confirmed' | 'completed' | 'pending' | 'cancelled' | 'in_progress';
 }
 
 export function BookingsSection() {
@@ -49,7 +49,7 @@ export function BookingsSection() {
       price: booking.budget ? `$${Number(booking.budget).toFixed(2)}` : 'TBD',
       address: booking.address || 'N/A',
       phone: booking.phone || 'N/A',
-      status: booking.status as 'confirmed' | 'completed' | 'pending' | 'cancelled'
+      status: booking.status as 'confirmed' | 'completed' | 'pending' | 'cancelled' | 'in_progress'
     };
   });
 

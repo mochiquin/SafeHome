@@ -6,16 +6,17 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
-import { 
-  ArrowLeft, 
-  Calendar, 
-  Clock, 
-  DollarSign, 
-  MapPin, 
-  Phone, 
-  User, 
+import {
+  ArrowLeft,
+  Calendar,
+  Clock,
+  DollarSign,
+  MapPin,
+  Phone,
+  User,
   FileText,
-  Home
+  Home,
+  KeyRound
 } from "lucide-react";
 import { bookingsApi } from "@/lib/apis";
 import type { Booking } from "@/lib/types/booking";
@@ -103,14 +104,16 @@ export default function BookingDetailPage() {
     confirmed: "bg-blue-100 text-blue-800 border-blue-200",
     completed: "bg-green-100 text-green-800 border-green-200",
     pending: "bg-yellow-100 text-yellow-800 border-yellow-200",
-    cancelled: "bg-red-100 text-red-800 border-red-200"
+    cancelled: "bg-red-100 text-red-800 border-red-200",
+    in_progress: "bg-orange-100 text-orange-800 border-orange-200"
   };
 
   const statusLabels = {
     confirmed: "Confirmed",
     completed: "Completed",
     pending: "Pending",
-    cancelled: "Cancelled"
+    cancelled: "Cancelled",
+    in_progress: "In Progress"
   };
 
   return (
@@ -245,6 +248,24 @@ export default function BookingDetailPage() {
             <div>
               <p className="text-sm text-muted-foreground">Phone Number</p>
               <p className="font-medium">{booking.phone}</p>
+            </div>
+          </div>
+
+          <Separator />
+
+          {/* Confirmation Code */}
+          <div>
+            <h3 className="text-lg font-semibold mb-4 flex items-center gap-2">
+              <KeyRound className="h-5 w-5" />
+              Confirmation Code
+            </h3>
+            <div className="bg-blue-50 border-2 border-blue-200 rounded-lg p-4">
+              <p className="text-sm text-muted-foreground mb-2">
+                Share this code with your provider to start the job
+              </p>
+              <p className="text-3xl font-bold text-blue-600 tracking-widest">
+                {booking.confirmation_code}
+              </p>
             </div>
           </div>
 
