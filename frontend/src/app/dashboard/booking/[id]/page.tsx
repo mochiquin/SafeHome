@@ -18,7 +18,7 @@ import {
   Home,
   KeyRound
 } from "lucide-react";
-import { bookingsApi } from "@/lib/apis";
+import { bookingsApi, authApi } from "@/lib/apis";
 import type { Booking } from "@/lib/types/booking";
 import { toast } from "sonner";
 import { SimpleMap } from "@/components/maps";
@@ -38,19 +38,30 @@ export default function BookingDetailPage() {
   const params = useParams();
   const router = useRouter();
   const bookingId = params.id as string;
-  
+
   const [booking, setBooking] = useState<Booking | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isCancelling, setIsCancelling] = useState(false);
+  const [isProvider, setIsProvider] = useState(false);
 
   useEffect(() => {
     const fetchBooking = async () => {
       try {
-        const response = await bookingsApi.getBooking(bookingId);
-        if (response.success && response.data) {
-          setBooking(response.data);
+        // Fetch both booking and current user info
+        const [bookingResponse, userResponse] = await Promise.all([
+          bookingsApi.getBooking(bookingId),
+          authApi.me()
+        ]);
+
+        if (bookingResponse.success && bookingResponse.data) {
+          setBooking(bookingResponse.data);
+
+          // Check if current user is a provider
+          if (userResponse.success && userResponse.data) {
+            setIsProvider(userResponse.data.role === 'provider');
+          }
         } else {
-          throw new Error(response.message || 'Failed to fetch booking');
+          throw new Error(bookingResponse.message || 'Failed to fetch booking');
         }
       } catch (error: any) {
         toast.error(error.message || 'Failed to fetch booking details');
@@ -253,26 +264,32 @@ export default function BookingDetailPage() {
 
           <Separator />
 
-          {/* Confirmation Code */}
-          <div>
-            <h3 className="text-lg font-semibold mb-4 flex items-center gap-2">
-              <KeyRound className="h-5 w-5" />
-              Confirmation Code
-            </h3>
-            <div className="bg-blue-50 border-2 border-blue-200 rounded-lg p-4">
-              <p className="text-sm text-muted-foreground mb-2">
-                Share this code with your provider to start the job
-              </p>
-              <p className="text-3xl font-bold text-blue-600 tracking-widest">
-                {booking.confirmation_code}
-              </p>
-            </div>
-          </div>
+          {/* Confirmation Code - Only show to customers */}
+          {!isProvider && (
+            <>
+              <div>
+                <h3 className="text-lg font-semibold mb-4 flex items-center gap-2">
+                  <KeyRound className="h-5 w-5" />
+                  Confirmation Code
+                </h3>
+                <div className="bg-blue-50 border-2 border-blue-200 rounded-lg p-4">
+                  <p className="text-sm text-muted-foreground mb-2">
+                    Share this code with your provider to start the job
+                  </p>
+                  <p className="text-3xl font-bold text-blue-600 tracking-widest">
+                    {booking.confirmation_code}
+                  </p>
+                </div>
+              </div>
+
+              <Separator />
+            </>
+          )}
 
           {/* Provider Information */}
           {booking.provider && (
             <>
-              <Separator />
+              {isProvider && <Separator />}
               <div>
                 <h3 className="text-lg font-semibold mb-4 flex items-center gap-2">
                   <User className="h-5 w-5" />

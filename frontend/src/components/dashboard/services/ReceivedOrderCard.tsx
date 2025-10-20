@@ -21,6 +21,7 @@ import type { Booking } from "@/lib/types/booking";
 import { useStartJob } from "@/hooks/use-start-job";
 import { bookingsApi } from "@/lib/apis";
 import { toast } from "sonner";
+import { useRouter } from "next/navigation";
 
 interface ReceivedOrderCardProps {
   booking: Booking;
@@ -28,6 +29,7 @@ interface ReceivedOrderCardProps {
 }
 
 export const ReceivedOrderCard = ({ booking, onJobStarted }: ReceivedOrderCardProps) => {
+  const router = useRouter();
   const { startJob, isLoading } = useStartJob();
   const [confirmationCode, setConfirmationCode] = useState("");
   const [dialogOpen, setDialogOpen] = useState(false);
@@ -220,7 +222,7 @@ export const ReceivedOrderCard = ({ booking, onJobStarted }: ReceivedOrderCardPr
               {isCompleting ? 'Completing...' : 'Mark Complete'}
             </Button>
           )}
-          <Button size="sm" variant="outline">
+          <Button size="sm" variant="outline" onClick={() => router.push(`/dashboard/booking/${booking.id}`)}>
             View Details
           </Button>
         </div>
