@@ -4,25 +4,38 @@ import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import { MapPin, Clock, DollarSign, User, Calendar, Phone, CheckCircle, XCircle, AlertCircle } from "lucide-react";
 import type { Booking } from "@/lib/types/booking";
+import { useStartJob } from "@/hooks/use-start-job";
 
 interface ReceivedOrderCardProps {
   booking: Booking;
+  onJobStarted?: () => void;
 }
 
-export const ReceivedOrderCard = ({ booking }: ReceivedOrderCardProps) => {
+export const ReceivedOrderCard = ({ booking, onJobStarted }: ReceivedOrderCardProps) => {
+  const { startJob, isLoading } = useStartJob();
+
   // Format the date and time
   const startDate = new Date(booking.start_time);
-  const formattedDate = startDate.toLocaleDateString('en-US', { 
-    month: 'short', 
-    day: 'numeric', 
-    year: 'numeric' 
+  const formattedDate = startDate.toLocaleDateString('en-US', {
+    month: 'short',
+    day: 'numeric',
+    year: 'numeric'
   });
-  const formattedTime = startDate.toLocaleTimeString('en-US', { 
-    hour: '2-digit', 
-    minute: '2-digit' 
+  const formattedTime = startDate.toLocaleTimeString('en-US', {
+    hour: '2-digit',
+    minute: '2-digit'
   });
-  
+
   const { status, address, phone } = booking;
+
+  const handleStartJob = async () => {
+    try {
+      await startJob(booking.id);
+      onJobStarted?.();
+    } catch (error) {
+      // Error handled in hook
+    }
+  };
   const statusColors = {
     pending: "bg-yellow-100 text-yellow-800 border-yellow-200",
     confirmed: "bg-blue-100 text-blue-800 border-blue-200",
@@ -119,9 +132,14 @@ export const ReceivedOrderCard = ({ booking }: ReceivedOrderCardProps) => {
             </>
           )}
           {status === 'confirmed' && (
-            <Button size="sm" className="bg-blue-600 hover:bg-blue-700">
+            <Button
+              size="sm"
+              className="bg-blue-600 hover:bg-blue-700"
+              onClick={handleStartJob}
+              disabled={isLoading}
+            >
               <AlertCircle className="h-4 w-4 mr-1" />
-              Start Job
+              {isLoading ? 'Starting...' : 'Start Job'}
             </Button>
           )}
           {status === 'in_progress' && (
