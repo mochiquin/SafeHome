@@ -19,6 +19,8 @@ import {
 import { MapPin, Clock, DollarSign, User, Calendar, Phone, CheckCircle, XCircle, AlertCircle } from "lucide-react";
 import type { Booking } from "@/lib/types/booking";
 import { useStartJob } from "@/hooks/use-start-job";
+import { bookingsApi } from "@/lib/apis";
+import { toast } from "sonner";
 
 interface ReceivedOrderCardProps {
   booking: Booking;
@@ -29,6 +31,7 @@ export const ReceivedOrderCard = ({ booking, onJobStarted }: ReceivedOrderCardPr
   const { startJob, isLoading } = useStartJob();
   const [confirmationCode, setConfirmationCode] = useState("");
   const [dialogOpen, setDialogOpen] = useState(false);
+  const [isCompleting, setIsCompleting] = useState(false);
 
   // Format the date and time
   const startDate = new Date(booking.start_time);
@@ -52,6 +55,21 @@ export const ReceivedOrderCard = ({ booking, onJobStarted }: ReceivedOrderCardPr
       onJobStarted?.();
     } catch (error) {
       // Error handled in hook
+    }
+  };
+
+  const handleCompleteJob = async () => {
+    setIsCompleting(true);
+    try {
+      const response = await bookingsApi.completeJob(booking.id);
+      if (response.success) {
+        toast.success('Job completed successfully');
+        onJobStarted?.();
+      }
+    } catch (error: any) {
+      toast.error(error.message || 'Failed to complete job');
+    } finally {
+      setIsCompleting(false);
     }
   };
   const statusColors = {
@@ -192,9 +210,14 @@ export const ReceivedOrderCard = ({ booking, onJobStarted }: ReceivedOrderCardPr
             </AlertDialog>
           )}
           {status === 'in_progress' && (
-            <Button size="sm" className="bg-green-600 hover:bg-green-700">
+            <Button
+              size="sm"
+              className="bg-green-600 hover:bg-green-700"
+              onClick={handleCompleteJob}
+              disabled={isCompleting}
+            >
               <CheckCircle className="h-4 w-4 mr-1" />
-              Mark Complete
+              {isCompleting ? 'Completing...' : 'Mark Complete'}
             </Button>
           )}
           <Button size="sm" variant="outline">
