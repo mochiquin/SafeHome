@@ -5,10 +5,10 @@ import { toast } from 'sonner';
 export function useStartJob() {
   const [isLoading, setIsLoading] = useState(false);
 
-  const startJob = async (bookingId: string) => {
+  const startJob = async (bookingId: string, confirmationCode: string) => {
     setIsLoading(true);
     try {
-      const response = await bookingsApi.startJob(bookingId);
+      const response = await bookingsApi.startJob(bookingId, confirmationCode);
       if (response.success) {
         toast.success(response.message || 'Job started successfully');
         return response.data;

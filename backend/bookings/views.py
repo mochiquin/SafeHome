@@ -7,6 +7,7 @@ from rest_framework.decorators import api_view, permission_classes, authenticati
 from django.shortcuts import get_object_or_404
 from django.db.models import Q, Count
 from accounts.authentication import JWTCookieAuthentication
+from accounts.views import IsProvider
 from core.parsers import EncryptedJSONParser
 from core import success_response
 from .models import Booking
@@ -199,9 +200,6 @@ class ProviderBookingListView(generics.ListAPIView):
     """
     List bookings that the provider has accepted (Received Orders)
     """
-    from accounts.authentication import JWTCookieAuthentication
-    from accounts.views import IsProvider
-    
     serializer_class = BookingDetailSerializer
     authentication_classes = [JWTCookieAuthentication]
     permission_classes = [permissions.IsAuthenticated, IsProvider]
@@ -227,9 +225,6 @@ class AvailableTasksListView(generics.ListAPIView):
     List available tasks (bookings without a provider assigned)
     Providers can view and accept these tasks
     """
-    from accounts.authentication import JWTCookieAuthentication
-    from accounts.views import IsProvider
-    
     serializer_class = BookingDetailSerializer
     authentication_classes = [JWTCookieAuthentication]
     permission_classes = [permissions.IsAuthenticated, IsProvider]
@@ -256,9 +251,6 @@ class AcceptBookingView(generics.UpdateAPIView):
     Accept a booking (assign provider to booking)
     Provider can accept an available task
     """
-    from accounts.authentication import JWTCookieAuthentication
-    from accounts.views import IsProvider
-
     serializer_class = BookingDetailSerializer
     authentication_classes = [JWTCookieAuthentication]
     permission_classes = [permissions.IsAuthenticated, IsProvider]
@@ -294,14 +286,12 @@ class AcceptBookingView(generics.UpdateAPIView):
 class StartJobView(generics.UpdateAPIView):
     """
     Start a job (change status from confirmed to in_progress)
-    Provider only
+    Provider only - requires confirmation code
     """
-    from accounts.authentication import JWTCookieAuthentication
-    from accounts.views import IsProvider
-
     serializer_class = BookingDetailSerializer
     authentication_classes = [JWTCookieAuthentication]
     permission_classes = [permissions.IsAuthenticated, IsProvider]
+    parser_classes = [EncryptedJSONParser]
 
     def get_object(self):
         """Get booking if it belongs to the provider and is confirmed"""
@@ -323,6 +313,18 @@ class StartJobView(generics.UpdateAPIView):
     def update(self, request, *args, **kwargs):
         """Start the job by changing status to in_progress"""
         booking = self.get_object()
+
+        # Verify confirmation code
+        confirmation_code = request.data.get('confirmation_code')
+        if not confirmation_code:
+            from rest_framework.exceptions import ValidationError
+            raise ValidationError("Confirmation code is required")
+
+        if confirmation_code != booking.confirmation_code:
+            from rest_framework.exceptions import ValidationError
+            raise ValidationError("Invalid confirmation code")
+
+        # Update status
         booking.status = 'in_progress'
         booking.save()
 

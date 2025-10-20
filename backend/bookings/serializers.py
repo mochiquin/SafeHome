@@ -1,6 +1,7 @@
 """
 Booking serializers for SafeHome
 """
+import random
 from rest_framework import serializers
 from django.utils import timezone
 from .models import Booking
@@ -49,9 +50,13 @@ class BookingCreateSerializer(serializers.ModelSerializer):
         # Get the user from request context
         user = self.context['request'].user
 
-        # Create booking instance
+        # Generate 4-digit confirmation code
+        confirmation_code = str(random.randint(1000, 9999))
+
+        # Create booking instance with confirmation code
         booking = Booking.objects.create(
             user=user,
+            confirmation_code=confirmation_code,
             **validated_data
         )
 
@@ -77,10 +82,10 @@ class BookingDetailSerializer(serializers.ModelSerializer):
         model = Booking
         fields = [
             'id', 'user', 'provider', 'service_type', 'service_type_display', 'budget',
-            'address', 'phone', 'city', 'state', 'country', 'start_time', 'duration_hours', 
-            'status', 'notes', 'created_at', 'updated_at'
+            'address', 'phone', 'city', 'state', 'country', 'start_time', 'duration_hours',
+            'status', 'confirmation_code', 'notes', 'created_at', 'updated_at'
         ]
-        read_only_fields = ['id', 'created_at', 'updated_at']
+        read_only_fields = ['id', 'confirmation_code', 'created_at', 'updated_at']
 
     def get_address(self, obj) -> str:
         """Decrypt and return address"""

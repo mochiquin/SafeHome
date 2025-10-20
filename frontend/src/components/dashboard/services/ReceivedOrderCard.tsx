@@ -1,7 +1,21 @@
+import { useState } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
 import { MapPin, Clock, DollarSign, User, Calendar, Phone, CheckCircle, XCircle, AlertCircle } from "lucide-react";
 import type { Booking } from "@/lib/types/booking";
 import { useStartJob } from "@/hooks/use-start-job";
@@ -13,6 +27,8 @@ interface ReceivedOrderCardProps {
 
 export const ReceivedOrderCard = ({ booking, onJobStarted }: ReceivedOrderCardProps) => {
   const { startJob, isLoading } = useStartJob();
+  const [confirmationCode, setConfirmationCode] = useState("");
+  const [dialogOpen, setDialogOpen] = useState(false);
 
   // Format the date and time
   const startDate = new Date(booking.start_time);
@@ -30,7 +46,9 @@ export const ReceivedOrderCard = ({ booking, onJobStarted }: ReceivedOrderCardPr
 
   const handleStartJob = async () => {
     try {
-      await startJob(booking.id);
+      await startJob(booking.id, confirmationCode);
+      setDialogOpen(false);
+      setConfirmationCode("");
       onJobStarted?.();
     } catch (error) {
       // Error handled in hook
@@ -132,15 +150,46 @@ export const ReceivedOrderCard = ({ booking, onJobStarted }: ReceivedOrderCardPr
             </>
           )}
           {status === 'confirmed' && (
-            <Button
-              size="sm"
-              className="bg-blue-600 hover:bg-blue-700"
-              onClick={handleStartJob}
-              disabled={isLoading}
-            >
-              <AlertCircle className="h-4 w-4 mr-1" />
-              {isLoading ? 'Starting...' : 'Start Job'}
-            </Button>
+            <AlertDialog open={dialogOpen} onOpenChange={setDialogOpen}>
+              <AlertDialogTrigger asChild>
+                <Button size="sm" className="bg-blue-600 hover:bg-blue-700">
+                  <AlertCircle className="h-4 w-4 mr-1" />
+                  Start Job
+                </Button>
+              </AlertDialogTrigger>
+              <AlertDialogContent>
+                <AlertDialogHeader>
+                  <AlertDialogTitle>Enter Confirmation Code</AlertDialogTitle>
+                  <AlertDialogDescription>
+                    Please enter the 4-digit confirmation code provided by the customer to start this job.
+                  </AlertDialogDescription>
+                </AlertDialogHeader>
+                <div className="py-4">
+                  <Label htmlFor="confirmation-code">Confirmation Code</Label>
+                  <Input
+                    id="confirmation-code"
+                    type="text"
+                    maxLength={4}
+                    placeholder="Enter 4-digit code"
+                    value={confirmationCode}
+                    onChange={(e) => setConfirmationCode(e.target.value.replace(/\D/g, ''))}
+                    className="mt-2 text-center text-2xl tracking-widest"
+                  />
+                </div>
+                <AlertDialogFooter>
+                  <AlertDialogCancel onClick={() => setConfirmationCode("")}>
+                    Cancel
+                  </AlertDialogCancel>
+                  <AlertDialogAction
+                    onClick={handleStartJob}
+                    disabled={confirmationCode.length !== 4 || isLoading}
+                    className="bg-blue-600 hover:bg-blue-700"
+                  >
+                    {isLoading ? 'Starting...' : 'Start Job'}
+                  </AlertDialogAction>
+                </AlertDialogFooter>
+              </AlertDialogContent>
+            </AlertDialog>
           )}
           {status === 'in_progress' && (
             <Button size="sm" className="bg-green-600 hover:bg-green-700">

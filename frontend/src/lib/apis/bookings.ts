@@ -79,8 +79,8 @@ export class BookingsApiClient extends BaseApiClient {
   /**
    * Start a job (provider starts a confirmed booking)
    */
-  async startJob(bookingId: string): Promise<ApiResponse<Booking>> {
-    return this.patch<Booking>(`/${bookingId}/start/`)
+  async startJob(bookingId: string, confirmationCode: string): Promise<ApiResponse<Booking>> {
+    return this.patch<Booking>(`/${bookingId}/start/`, { confirmation_code: confirmationCode })
   }
 }
 

@@ -1,7 +1,8 @@
 {
   "permissions": {
     "allow": [
-      "Bash(docker-compose ps)"
+      "Bash(docker-compose ps)",
+      "Bash(docker exec safehome_api python manage.py makemigrations bookings)"
     ],
     "deny": [],
     "ask": []

@@ -120,6 +120,14 @@ class Booking(UUIDModel):
         verbose_name='Booking Status'
     )
 
+    # Confirmation code (4-digit code for job verification)
+    confirmation_code = models.CharField(
+        max_length=4,
+        default='0000',
+        verbose_name='Confirmation Code',
+        help_text='4-digit code for provider to start the job'
+    )
+
     # Additional notes
     notes = models.TextField(
         blank=True,

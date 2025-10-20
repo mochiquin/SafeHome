@@ -6,7 +6,7 @@ export type BookingStatus = 'pending' | 'confirmed' | 'in_progress' | 'completed
 /**
  * Service type enum
  */
-export type ServiceType = 
+export type ServiceType =
   | 'cleaning'
   | 'plumbing'
   | 'electrical'
@@ -39,6 +39,7 @@ export interface Booking {
   start_time: string // ISO datetime string
   duration_hours: number
   status: BookingStatus
+  confirmation_code: number // 4-digit code for job verification
   notes?: string
   created_at: string
   updated_at: string
