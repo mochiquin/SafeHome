@@ -45,6 +45,11 @@ export function LoginForm({ role }: LoginFormProps) {
     setError(null);
 
     try {
+      // Clear any existing token before login to prevent conflicts
+      if (typeof window !== 'undefined') {
+        localStorage.removeItem('token');
+      }
+
       const response = await authApi.login(data);
 
       if (response.success && response.data?.user) {

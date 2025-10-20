@@ -32,6 +32,12 @@ export function DashboardHeader() {
     setIsLoggingOut(true);
     try {
       const response = await authApi.logout();
+
+      // Clear any tokens from localStorage
+      if (typeof window !== 'undefined') {
+        localStorage.removeItem('token');
+      }
+
       if (response.success) {
         toast.success('Logged out successfully');
         router.push('/');
@@ -39,7 +45,12 @@ export function DashboardHeader() {
         throw new Error(response.message || 'Failed to logout');
       }
     } catch (error: any) {
+      // Even if logout API fails, clear local token and redirect
+      if (typeof window !== 'undefined') {
+        localStorage.removeItem('token');
+      }
       toast.error(error.message || 'Failed to logout');
+      router.push('/');
     } finally {
       setIsLoggingOut(false);
     }

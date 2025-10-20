@@ -184,6 +184,10 @@ class LoginView(generics.GenericAPIView):
             status_code=status.HTTP_200_OK
         )
 
+        # Clear any existing cookies first (in case of account switching)
+        response.delete_cookie('access_token', path='/')
+        response.delete_cookie('refresh_token', path='/')
+
         # Set HttpOnly cookies
         # For cross-origin requests (localhost:3000 -> localhost:8000), we need:
         # 1. CORS_ALLOW_CREDENTIALS = True (already set)

@@ -3,6 +3,7 @@ import { Inter } from "next/font/google";
 // These styles apply to every route in the application
 import './globals.css'
 import { Toaster } from "@/components/ui/sonner";
+import { TokenRefreshProvider } from "@/components/providers/TokenRefreshProvider";
 
 const inter = Inter({ subsets: ["latin"] });
 
@@ -19,8 +20,10 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body className={inter.className}>
-        {children}
-        <Toaster />
+        <TokenRefreshProvider>
+          {children}
+          <Toaster />
+        </TokenRefreshProvider>
       </body>
     </html>
   );
