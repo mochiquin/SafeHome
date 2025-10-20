@@ -192,6 +192,30 @@ export function RegisterForm({ role }: RegisterFormProps) {
           <p className="text-sm text-red-600">{errors.city.message}</p>
         )}
       </div>
+      {watchRole === 'provider' && (
+        <div className="space-y-2">
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Label htmlFor="provider_id" className="inline-flex items-center">
+                Provider ID * <Info className="ml-1 h-3 w-3" />
+              </Label>
+            </TooltipTrigger>
+            <TooltipContent>
+              <p>Enter your unique 16-digit Provider ID provided by SafeHome.</p>
+            </TooltipContent>
+          </Tooltip>
+          <Input
+            id="provider_id"
+            placeholder="Enter your 16-digit Provider ID"
+            maxLength={16}
+            {...register('provider_id')}
+            disabled={isLoading}
+          />
+          {errors.provider_id && (
+            <p className="text-sm text-red-600">{errors.provider_id.message}</p>
+          )}
+        </div>
+      )}
       <div className="flex items-center space-x-2">
         <Checkbox
           id="vaccinated"

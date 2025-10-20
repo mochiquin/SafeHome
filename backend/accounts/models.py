@@ -36,6 +36,15 @@ class User(AbstractUser):
         help_text='COVID-19 vaccination status'
     )
 
+    provider_id = models.CharField(
+        max_length=16,
+        unique=True,
+        blank=True,
+        null=True,
+        verbose_name='Provider ID',
+        help_text='Unique 16-digit ID for service providers'
+    )
+
     # Use email as username field
     USERNAME_FIELD = 'email'
     REQUIRED_FIELDS = ['username']
@@ -67,6 +76,44 @@ class User(AbstractUser):
     def can_book_services(self):
         """Check if user can book services (customers)"""
         return self.role == 'customer'
+
+
+class ProviderIDWhitelist(models.Model):
+    """Model to store valid provider IDs that can be used for registration"""
+
+    provider_id = models.CharField(
+        max_length=16,
+        unique=True,
+        verbose_name='Provider ID',
+        help_text='16-digit provider ID'
+    )
+
+    is_used = models.BooleanField(
+        default=False,
+        verbose_name='Is Used',
+        help_text='Whether this ID has been used for registration'
+    )
+
+    created_at = models.DateTimeField(
+        auto_now_add=True,
+        verbose_name='Created At'
+    )
+
+    used_at = models.DateTimeField(
+        blank=True,
+        null=True,
+        verbose_name='Used At',
+        help_text='When this ID was used for registration'
+    )
+
+    class Meta:
+        verbose_name = 'Provider ID Whitelist'
+        verbose_name_plural = 'Provider ID Whitelist'
+        ordering = ['-created_at']
+
+    def __str__(self):
+        status = "Used" if self.is_used else "Available"
+        return f"{self.provider_id} ({status})"
 
 
 class ConsentLog(models.Model):

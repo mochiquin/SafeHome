@@ -63,20 +63,59 @@ class RegisterView(generics.CreateAPIView):
     parser_classes = [EncryptedJSONParser]
 
     def create(self, request, *args, **kwargs):
-        """Create user and return success response"""
+        """Create user and return success response with auto-login"""
+        import logging
+        logger = logging.getLogger('safehome')
+
+        logger.info(f"Registration data received: {request.data.keys()}")
+
         serializer = self.get_serializer(data=request.data, context={'request': request})
-        serializer.is_valid(raise_exception=True)
+
+        if not serializer.is_valid():
+            logger.error(f"Registration validation errors: {serializer.errors}")
+            return error_response(
+                message='Registration failed',
+                data=serializer.errors,
+                status_code=status.HTTP_400_BAD_REQUEST
+            )
 
         user = serializer.save()
+
+        # Auto-login: Generate JWT tokens for the new user
+        refresh = RefreshToken.for_user(user)
 
         # Return user data (without sensitive information)
         user_data = UserSerializer(user).data
 
-        return success_response(
+        # Create response with user data
+        response = success_response(
             data={'user': user_data},
             message='User registered successfully',
             status_code=status.HTTP_201_CREATED
         )
+
+        # Set HttpOnly cookies for authentication (same as login)
+        response.set_cookie(
+            'access_token',
+            str(refresh.access_token),
+            max_age=settings.SIMPLE_JWT['ACCESS_TOKEN_LIFETIME'].total_seconds(),
+            httponly=True,
+            secure=False,
+            samesite='Lax',
+            path='/',
+        )
+
+        response.set_cookie(
+            'refresh_token',
+            str(refresh),
+            max_age=settings.SIMPLE_JWT['REFRESH_TOKEN_LIFETIME'].total_seconds(),
+            httponly=True,
+            secure=False,
+            samesite='Lax',
+            path='/',
+        )
+
+        return response
 
 
 class UserProfileView(generics.RetrieveUpdateAPIView):

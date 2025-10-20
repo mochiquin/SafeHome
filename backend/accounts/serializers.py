@@ -3,7 +3,8 @@ Serializers for the accounts app
 """
 from rest_framework import serializers
 from django.db import transaction
-from .models import ConsentLog, User
+from django.utils import timezone
+from .models import ConsentLog, User, ProviderIDWhitelist
 
 
 class RegisterSerializer(serializers.ModelSerializer):
@@ -38,7 +39,8 @@ class RegisterSerializer(serializers.ModelSerializer):
             'consent',
             'role',
             'city',
-            'vaccinated'
+            'vaccinated',
+            'provider_id'
         ]
         extra_kwargs = {
             'email': {'required': True},
@@ -63,6 +65,25 @@ class RegisterSerializer(serializers.ModelSerializer):
             raise serializers.ValidationError("Invalid role. Must be 'customer', 'provider', or 'admin'.")
         return value
 
+    def validate_provider_id(self, value):
+        """Validate provider_id against whitelist"""
+        if value:
+            # Check if it's exactly 16 characters
+            if len(value) != 16:
+                raise serializers.ValidationError("Provider ID must be exactly 16 characters.")
+
+            # Check if ID exists in whitelist
+            try:
+                whitelist_entry = ProviderIDWhitelist.objects.get(provider_id=value)
+            except ProviderIDWhitelist.DoesNotExist:
+                raise serializers.ValidationError("Invalid Provider ID. This ID is not authorized.")
+
+            # Check if ID has already been used
+            if whitelist_entry.is_used:
+                raise serializers.ValidationError("This Provider ID has already been used.")
+
+        return value
+
     def validate(self, data):
         """Validate password confirmation and consent"""
         if data.get('password') != data.get('password_confirm'):
@@ -73,6 +94,18 @@ class RegisterSerializer(serializers.ModelSerializer):
         if not data.get('consent'):
             raise serializers.ValidationError({
                 'consent': 'You must agree to the terms and conditions.'
+            })
+
+        # Validate provider_id is required for providers
+        if data.get('role') == 'provider' and not data.get('provider_id'):
+            raise serializers.ValidationError({
+                'provider_id': 'Provider ID is required for provider accounts.'
+            })
+
+        # Validate provider_id is not provided for non-providers
+        if data.get('role') != 'provider' and data.get('provider_id'):
+            raise serializers.ValidationError({
+                'provider_id': 'Provider ID should only be provided for provider accounts.'
             })
 
         return data
@@ -106,7 +139,8 @@ class RegisterSerializer(serializers.ModelSerializer):
                 last_name=validated_data.get('last_name', ''),
                 role=validated_data.get('role', 'customer'),
                 city=validated_data.get('city'),
-                vaccinated=validated_data.get('vaccinated', False)
+                vaccinated=validated_data.get('vaccinated', False),
+                provider_id=validated_data.get('provider_id')
             )
 
             # Create consent log
@@ -116,6 +150,15 @@ class RegisterSerializer(serializers.ModelSerializer):
                 ip_address=ip_address,
                 user_agent=user_agent
             )
+
+            # Mark provider ID as used if this is a provider account
+            if validated_data.get('provider_id'):
+                ProviderIDWhitelist.objects.filter(
+                    provider_id=validated_data['provider_id']
+                ).update(
+                    is_used=True,
+                    used_at=timezone.now()
+                )
 
         return user
 
@@ -149,7 +192,8 @@ class UserSerializer(serializers.ModelSerializer):
             'role',
             'city',
             'vaccinated',
+            'provider_id',
             'date_joined',
             'last_login'
         ]
-        read_only_fields = ['id', 'email', 'username', 'date_joined', 'last_login']
+        read_only_fields = ['id', 'email', 'username', 'provider_id', 'date_joined', 'last_login']

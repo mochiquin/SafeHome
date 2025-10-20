@@ -79,6 +79,7 @@ MIDDLEWARE = [
     'django.contrib.sessions.middleware.SessionMiddleware',
     'corsheaders.middleware.CorsMiddleware',
     'django.middleware.common.CommonMiddleware',
+    'core.middleware.DisableCSRFMiddleware',  # Disable CSRF for API endpoints
     'django.middleware.csrf.CsrfViewMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
@@ -198,6 +199,24 @@ CORS_ALLOWED_ORIGINS = env('DJANGO_CORS_ALLOWED_ORIGINS').split(',') if env('DJA
     'http://127.0.0.1:3001',
 ]
 CORS_ALLOW_CREDENTIALS = True
+
+# CSRF settings for cross-origin requests
+CSRF_TRUSTED_ORIGINS = [
+    'http://localhost:3000',
+    'http://localhost:3001',
+    'http://127.0.0.1:3000',
+    'http://127.0.0.1:3001',
+]
+try:
+    if env('DJANGO_CSRF_TRUSTED_ORIGINS', default=''):
+        CSRF_TRUSTED_ORIGINS = env('DJANGO_CSRF_TRUSTED_ORIGINS').split(',')
+except:
+    pass
+
+# Exempt certain endpoints from CSRF validation
+CSRF_COOKIE_HTTPONLY = False  # Allow JavaScript to read CSRF cookie
+CSRF_COOKIE_SAMESITE = 'Lax'
+CSRF_USE_SESSIONS = False
 
 # Custom User model
 AUTH_USER_MODEL = 'accounts.User'

@@ -17,9 +17,19 @@ export const registerSchema = z.object({
   role: z.enum(["customer", "provider"]),
   city: z.string().optional(),
   vaccinated: z.boolean(),
+  provider_id: z.string().optional(),
 }).refine((data) => data.password === data.password_confirm, {
   message: "Passwords do not match",
   path: ["password_confirm"],
+}).refine((data) => {
+  // Provider ID is required for providers and must be exactly 16 characters
+  if (data.role === "provider") {
+    return data.provider_id && data.provider_id.length === 16;
+  }
+  return true;
+}, {
+  message: "Provider ID is required and must be exactly 16 characters",
+  path: ["provider_id"],
 })
 
 export type LoginFormData = z.infer<typeof loginSchema>

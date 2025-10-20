@@ -10,9 +10,20 @@ from django.conf import settings
 from django.core.exceptions import ValidationError
 from rest_framework.exceptions import APIException
 from rest_framework.views import exception_handler
+from django.utils.deprecation import MiddlewareMixin
 
 # Get logger for this module
 logger = logging.getLogger('safehome')
+
+
+class DisableCSRFMiddleware(MiddlewareMixin):
+    """
+    Middleware to disable CSRF for API endpoints that are already exempt
+    """
+    def process_request(self, request):
+        # Exempt API endpoints from CSRF checks
+        if request.path.startswith('/api/'):
+            setattr(request, '_dont_enforce_csrf_checks', True)
 
 class RequestLoggingMiddleware:
     """Middleware to log HTTP requests and responses"""
