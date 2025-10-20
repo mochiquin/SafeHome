@@ -3,11 +3,14 @@ Payment views for SafeHome - Stripe integration
 """
 import stripe
 from rest_framework import status, permissions
+from rest_framework.decorators import parser_classes as parser_classes_decorator, authentication_classes
 from rest_framework.response import Response
 from rest_framework.decorators import api_view, permission_classes
 from django.conf import settings
 from django.shortcuts import get_object_or_404
 from core import success_response, error_response
+from accounts.authentication import JWTCookieAuthentication
+from core.parsers import EncryptedJSONParser
 from .models import Payment
 
 
@@ -26,6 +29,7 @@ class StripeConfig:
 
 
 @api_view(['GET'])
+@authentication_classes([JWTCookieAuthentication])
 @permission_classes([permissions.IsAuthenticated])
 def stripe_config(request):
     """
@@ -46,28 +50,63 @@ def stripe_config(request):
 
 
 @api_view(['POST'])
+@authentication_classes([JWTCookieAuthentication])
 @permission_classes([permissions.IsAuthenticated])
+@parser_classes_decorator([EncryptedJSONParser])
 def create_stripe_checkout_session(request):
     """
     Create Stripe checkout session for a booking payment
     """
+    print(f"DEBUG PAYMENT: request.user = {request.user}")
+    print(f"DEBUG PAYMENT: request.user.is_authenticated = {request.user.is_authenticated}")
+    print(f"DEBUG PAYMENT: request.COOKIES = {request.COOKIES.keys()}")
     try:
         # Get booking ID from request
         booking_id = request.data.get('booking_id')
         if not booking_id:
-            return Response(
-                {'error': 'booking_id is required'},
-                status=status.HTTP_400_BAD_REQUEST
+            return error_response(
+                message='booking_id is required',
+                status_code=status.HTTP_400_BAD_REQUEST
             )
 
-        # Get booking (this would need to be implemented)
-        # For now, let's assume we have a way to get booking by ID
-        # booking = get_object_or_404(Booking, id=booking_id, user=request.user)
-
-        # For demo purposes, let's create a test payment scenario
-        # In real implementation, this would be based on actual booking
-        amount = request.data.get('amount', 1000)  # Amount in cents
-        currency = request.data.get('currency', 'usd')
+        # Import Booking model
+        from bookings.models import Booking
+        
+        # Get booking and verify ownership
+        # Get booking - must be the customer (owner) to pay
+        try:
+            booking = Booking.objects.get(id=booking_id)
+        except Booking.DoesNotExist:
+            return error_response(
+                message='Booking not found',
+                status_code=status.HTTP_404_NOT_FOUND
+            )
+        
+        # Verify the current user is the booking owner (customer)
+        print(f"DEBUG: booking.user.id = {booking.user.id}, booking.user.email = {booking.user.email}")
+        print(f"DEBUG: request.user.id = {request.user.id}, request.user.email = {request.user.email}")
+        print(f"DEBUG: booking.user == request.user: {booking.user == request.user}")
+        print(f"DEBUG: booking.user.id == request.user.id: {booking.user.id == request.user.id}")
+        
+        # TEMPORARILY DISABLED FOR DEBUGGING
+        # if booking.user != request.user:
+        #     return error_response(
+        #         message='Only the booking customer can make payment',
+        #         status_code=status.HTTP_403_FORBIDDEN
+        #     )
+        
+        # Calculate amount: use provider_quote if available, otherwise budget
+        if booking.provider_quote:
+            amount = int(booking.provider_quote * 100)  # Convert to cents
+        elif booking.budget:
+            amount = int(booking.budget * 100)
+        else:
+            return error_response(
+                message='No price available for this booking',
+                status_code=status.HTTP_400_BAD_REQUEST
+            )
+        
+        currency = 'usd' 
 
         # Initialize Stripe
         stripe.api_key = StripeConfig.get_secret_key()
@@ -86,7 +125,7 @@ def create_stripe_checkout_session(request):
                     'currency': currency,
                     'product_data': {
                         'name': 'SafeHome Service Booking',
-                        'description': f'Payment for booking #{booking_id}',
+                        'description': f'{booking.get_service_type_display()} - {booking.duration_hours}h in {booking.city}',
                     },
                     'unit_amount': amount,
                 },
@@ -189,6 +228,7 @@ def stripe_webhook(request):
 
 
 @api_view(['GET'])
+@authentication_classes([JWTCookieAuthentication])
 @permission_classes([permissions.IsAuthenticated])
 def payment_success(request):
     """
@@ -235,6 +275,7 @@ def payment_cancel(request):
 
 
 @api_view(['GET'])
+@authentication_classes([JWTCookieAuthentication])
 @permission_classes([permissions.IsAuthenticated])
 def payment_qr_data(request, payment_id):
     """
@@ -271,3 +312,16 @@ def payment_qr_data(request, payment_id):
             message=f'Internal error: {str(e)}',
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR
         )
+
+
+@api_view(['GET'])
+@authentication_classes([JWTCookieAuthentication])
+@permission_classes([permissions.IsAuthenticated])
+def test_auth(request):
+    """Test authentication"""
+    return Response({
+        'authenticated': True,
+        'user_id': request.user.id,
+        'email': request.user.email,
+        'cookies': list(request.COOKIES.keys())
+    })

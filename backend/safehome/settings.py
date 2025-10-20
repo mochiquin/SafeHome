@@ -223,3 +223,9 @@ AUTH_USER_MODEL = 'accounts.User'
 
 # Use custom logging configuration from logging.py
 # LOGGING = LOGGING  # This is already imported at the top
+
+# Stripe Configuration
+STRIPE_PUBLISHABLE_KEY = env('STRIPE_PUBLISHABLE_KEY')
+STRIPE_SECRET_KEY = env('STRIPE_SECRET_KEY')
+STRIPE_WEBHOOK_SECRET = env('STRIPE_WEBHOOK_SECRET')
+FRONTEND_URL = env('FRONTEND_URL')

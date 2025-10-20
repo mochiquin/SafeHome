@@ -27,9 +27,9 @@ export function useAvailableTasks() {
     }
   }, []);
 
-  const acceptTask = useCallback(async (bookingId: string) => {
+  const acceptTask = useCallback(async (bookingId: string, providerQuote?: number) => {
     try {
-      const response = await bookingsApi.acceptBooking(bookingId);
+      const response = await bookingsApi.acceptBooking(bookingId, providerQuote);
       if (response.success) {
         toast.success('Task accepted successfully!');
         // Remove the accepted task from the list

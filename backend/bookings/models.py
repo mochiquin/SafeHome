@@ -59,6 +59,16 @@ class Booking(UUIDModel):
         help_text='Customer budget for the service'
     )
 
+    # Provider quote (final price)
+    provider_quote = models.DecimalField(
+        max_digits=10,
+        decimal_places=2,
+        null=True,
+        blank=True,
+        verbose_name='Provider Quote',
+        help_text='Provider quoted price for the service'
+    )
+
     # Encrypted personal information
     address_enc = models.BinaryField(
         verbose_name='Encrypted Address',
