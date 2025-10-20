@@ -82,8 +82,8 @@ class BookingDetailSerializer(serializers.ModelSerializer):
         model = Booking
         fields = [
             'id', 'user', 'provider', 'service_type', 'service_type_display', 'budget',
-            'address', 'phone', 'city', 'state', 'country', 'start_time', 'duration_hours',
-            'status', 'confirmation_code', 'notes', 'created_at', 'updated_at'
+            'provider_quote', 'address', 'phone', 'city', 'state', 'country', 'start_time',
+            'duration_hours', 'status', 'confirmation_code', 'notes', 'created_at', 'updated_at'
         ]
         read_only_fields = ['id', 'confirmation_code', 'created_at', 'updated_at']
 

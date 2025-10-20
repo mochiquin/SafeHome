@@ -249,11 +249,12 @@ class AvailableTasksListView(generics.ListAPIView):
 class AcceptBookingView(generics.UpdateAPIView):
     """
     Accept a booking (assign provider to booking)
-    Provider can accept an available task
+    Provider can accept an available task and optionally provide a quote
     """
     serializer_class = BookingDetailSerializer
     authentication_classes = [JWTCookieAuthentication]
     permission_classes = [permissions.IsAuthenticated, IsProvider]
+    parser_classes = [EncryptedJSONParser]
 
     def get_object(self):
         """Get booking if it's available (no provider assigned)"""
@@ -268,12 +269,22 @@ class AcceptBookingView(generics.UpdateAPIView):
         return booking
 
     def update(self, request, *args, **kwargs):
-        """Accept the booking by assigning current provider"""
+        """Accept the booking by assigning current provider and optional quote"""
         booking = self.get_object()
+
+        # Get optional provider quote from request
+        provider_quote = request.data.get('provider_quote')
 
         # Assign provider and update status
         booking.provider = request.user
         booking.status = 'confirmed'
+
+        # Set provider quote if provided, otherwise use customer budget
+        if provider_quote:
+            booking.provider_quote = provider_quote
+        elif booking.budget:
+            booking.provider_quote = booking.budget
+
         booking.save()
 
         serializer = self.get_serializer(booking)

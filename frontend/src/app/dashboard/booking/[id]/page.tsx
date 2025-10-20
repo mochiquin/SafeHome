@@ -18,7 +18,7 @@ import {
   Home,
   KeyRound
 } from "lucide-react";
-import { bookingsApi, authApi } from "@/lib/apis";
+import { bookingsApi, authApi, paymentsApi } from "@/lib/apis";
 import type { Booking } from "@/lib/types/booking";
 import { toast } from "sonner";
 import { SimpleMap } from "@/components/maps";
@@ -43,6 +43,7 @@ export default function BookingDetailPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [isCancelling, setIsCancelling] = useState(false);
   const [isProvider, setIsProvider] = useState(false);
+  const [isPayingNow, setIsPayingNow] = useState(false);
 
   useEffect(() => {
     const fetchBooking = async () => {
@@ -73,6 +74,24 @@ export default function BookingDetailPage() {
 
     fetchBooking();
   }, [bookingId, router]);
+
+  const handlePayNow = async () => {
+    setIsPayingNow(true);
+    try {
+      const response = await paymentsApi.createStripeCheckout({
+        booking_id: bookingId
+      });
+      if (response.success && response.data) {
+        // Redirect to Stripe checkout
+        window.location.href = response.data.checkout_url;
+      } else {
+        throw new Error(response.message || 'Failed to create checkout session');
+      }
+    } catch (error: any) {
+      toast.error(error.message || 'Failed to initiate payment');
+      setIsPayingNow(false);
+    }
+  };
 
   const handleCancelBooking = async () => {
     setIsCancelling(true);
@@ -167,7 +186,7 @@ export default function BookingDetailPage() {
               </div>
               {booking.budget && (
                 <div>
-                  <p className="text-sm text-muted-foreground">Budget</p>
+                  <p className="text-sm text-muted-foreground">Customer Budget</p>
                   <p className="font-medium">${Number(booking.budget).toFixed(2)}</p>
                 </div>
               )}
@@ -186,11 +205,11 @@ export default function BookingDetailPage() {
               <div>
                 <p className="text-sm text-muted-foreground">Date</p>
                 <p className="font-medium">
-                  {startDate.toLocaleDateString('en-US', { 
+                  {startDate.toLocaleDateString('en-US', {
                     weekday: 'long',
-                    year: 'numeric', 
-                    month: 'long', 
-                    day: 'numeric' 
+                    year: 'numeric',
+                    month: 'long',
+                    day: 'numeric'
                   })}
                 </p>
               </div>
@@ -236,7 +255,7 @@ export default function BookingDetailPage() {
                   <p className="font-medium">{booking.country}</p>
                 </div>
               </div>
-              
+
               {/* Map Display */}
               <div className="mt-4">
                 <p className="text-sm text-muted-foreground mb-2">Map</p>
@@ -287,21 +306,35 @@ export default function BookingDetailPage() {
           )}
 
           {/* Provider Information */}
-          {booking.provider && (
+          {!isProvider && booking.provider && (
             <>
-              {isProvider && <Separator />}
+              <Separator />
               <div>
                 <h3 className="text-lg font-semibold mb-4 flex items-center gap-2">
                   <User className="h-5 w-5" />
                   Provider
                 </h3>
-                <div>
-                  <p className="text-sm text-muted-foreground">Provider Name</p>
-                  <p className="font-medium">
-                    {booking.provider.first_name || booking.provider.last_name
-                      ? `${booking.provider.first_name || ''} ${booking.provider.last_name || ''}`.trim()
-                      : booking.provider.email}
-                  </p>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <p className="text-sm text-muted-foreground">Provider Name</p>
+                    <p className="font-medium">
+                      {booking.provider.first_name || booking.provider.last_name
+                        ? `${booking.provider.first_name || ''} ${booking.provider.last_name || ''}`.trim()
+                        : 'Not provided'}
+                    </p>
+                  </div>
+                  <div>
+                    <p className="text-sm text-muted-foreground">Provider Email</p>
+                    <p className="font-medium">{booking.provider.email}</p>
+                  </div>
+                  {booking.provider_quote && (
+                    <div>
+                      <p className="text-sm text-muted-foreground">Provider Quote</p>
+                      <p className="font-medium text-green-600 text-lg">
+                        ${Number(booking.provider_quote).toFixed(2)}
+                      </p>
+                    </div>
+                  )}
                 </div>
               </div>
             </>
@@ -324,6 +357,17 @@ export default function BookingDetailPage() {
           {/* Actions */}
           <Separator />
           <div className="flex gap-3 pt-4">
+            {!isProvider && booking.status === 'confirmed' && (booking.provider_quote || booking.budget) && (
+              <Button
+                onClick={handlePayNow}
+                disabled={isPayingNow}
+                className="bg-green-600 hover:bg-green-700"
+              >
+                <DollarSign className="h-4 w-4 mr-2" />
+                {isPayingNow ? 'Redirecting...' : 'Pay Now'}
+              </Button>
+            )}
+
             {(booking.status === 'pending' || booking.status === 'confirmed') && (
               <AlertDialog>
                 <AlertDialogTrigger asChild>

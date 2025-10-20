@@ -33,6 +33,7 @@ export interface Booking {
   service_type: ServiceType // Service type (enum)
   service_type_display?: string // Human-readable service type
   budget?: number // Customer budget
+  provider_quote?: number // Provider quoted price for the service
   city: string
   state?: string
   country: string

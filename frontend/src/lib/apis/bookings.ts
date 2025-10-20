@@ -65,8 +65,9 @@ export class BookingsApiClient extends BaseApiClient {
   /**
    * Accept a booking (provider accepts an available task)
    */
-  async acceptBooking(bookingId: string): Promise<ApiResponse<Booking>> {
-    return this.patch<Booking>(`/${bookingId}/accept/`)
+  async acceptBooking(bookingId: string, providerQuote?: number): Promise<ApiResponse<Booking>> {
+    const data = providerQuote ? { provider_quote: providerQuote } : {};
+    return this.patch<Booking>(`/${bookingId}/accept/`, data)
   }
 
   /**

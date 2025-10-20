@@ -1,5 +1,6 @@
 from django.urls import path
 from .views import (
+    test_auth,
     stripe_config,
     create_stripe_checkout_session,
     stripe_webhook,
@@ -24,4 +25,5 @@ urlpatterns = [
 
     # QR data for mobile payments (owner only)
     path('<uuid:payment_id>/qr/', payment_qr_data, name='payment-qr-data'),
+    path('test-auth/', test_auth, name='test-auth'),
 ]
