@@ -82,17 +82,14 @@ export const AvailableTaskCard = ({ task, onAccept }: AvailableTaskCardProps) =>
         )}
 
         <div className="flex gap-2 mt-4">
-          <Button 
-            size="sm" 
+          <Button
+            size="sm"
             className="bg-green-600 hover:bg-green-700"
             onClick={handleAccept}
             disabled={isAccepting}
           >
             <CheckCircle className="h-4 w-4 mr-1" />
             {isAccepting ? 'Accepting...' : 'Accept Task'}
-          </Button>
-          <Button size="sm" variant="outline">
-            View Details
           </Button>
         </div>
       </CardContent>
