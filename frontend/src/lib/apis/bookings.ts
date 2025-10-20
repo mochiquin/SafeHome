@@ -82,6 +82,13 @@ export class BookingsApiClient extends BaseApiClient {
   async startJob(bookingId: string, confirmationCode: string): Promise<ApiResponse<Booking>> {
     return this.patch<Booking>(`/${bookingId}/start/`, { confirmation_code: confirmationCode })
   }
+
+  /**
+   * Complete a job (provider completes an in-progress booking)
+   */
+  async completeJob(bookingId: string): Promise<ApiResponse<Booking>> {
+    return this.patch<Booking>(`/${bookingId}/complete/`)
+  }
 }
 
 // Export singleton instance

@@ -333,3 +333,42 @@ class StartJobView(generics.UpdateAPIView):
             data=serializer.data,
             message='Job started successfully'
         )
+
+
+class CompleteJobView(generics.UpdateAPIView):
+    """
+    Complete a job (change status from in_progress to completed)
+    Provider only
+    """
+    serializer_class = BookingDetailSerializer
+    authentication_classes = [JWTCookieAuthentication]
+    permission_classes = [permissions.IsAuthenticated, IsProvider]
+
+    def get_object(self):
+        """Get booking if it belongs to the provider and is in progress"""
+        booking_id = self.kwargs['pk']
+        booking = get_object_or_404(Booking, id=booking_id)
+
+        # Check if booking belongs to this provider
+        if booking.provider != self.request.user:
+            from rest_framework.exceptions import NotFound
+            raise NotFound("Booking not found")
+
+        # Check if booking status is in_progress
+        if booking.status != 'in_progress':
+            from rest_framework.exceptions import ValidationError
+            raise ValidationError(f"Cannot complete job. Current status is {booking.status}")
+
+        return booking
+
+    def update(self, request, *args, **kwargs):
+        """Complete the job by changing status to completed"""
+        booking = self.get_object()
+        booking.status = 'completed'
+        booking.save()
+
+        serializer = self.get_serializer(booking)
+        return success_response(
+            data=serializer.data,
+            message='Job completed successfully'
+        )

@@ -9,7 +9,8 @@ from .views import (
     ProviderBookingListView,
     AvailableTasksListView,
     AcceptBookingView,
-    StartJobView
+    StartJobView,
+    CompleteJobView
 )
 
 urlpatterns = [
@@ -30,6 +31,9 @@ urlpatterns = [
 
     # Provider starts a job
     path('<uuid:pk>/start/', StartJobView.as_view(), name='start-job'),
+
+    # Provider completes a job
+    path('<uuid:pk>/complete/', CompleteJobView.as_view(), name='complete-job'),
 
     # Booking statistics
     path('stats/', user_booking_stats, name='booking-stats'),
