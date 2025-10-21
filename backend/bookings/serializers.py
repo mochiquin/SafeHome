@@ -77,13 +77,15 @@ class BookingDetailSerializer(serializers.ModelSerializer):
     service_type_display = serializers.CharField(source='get_service_type_display', read_only=True)
     user = serializers.SerializerMethodField()
     provider = serializers.SerializerMethodField()
+    payment_status = serializers.SerializerMethodField()
 
     class Meta:
         model = Booking
         fields = [
             'id', 'user', 'provider', 'service_type', 'service_type_display', 'budget',
             'provider_quote', 'address', 'phone', 'city', 'state', 'country', 'start_time',
-            'duration_hours', 'status', 'confirmation_code', 'notes', 'created_at', 'updated_at'
+            'duration_hours', 'status', 'confirmation_code', 'notes', 'payment_status',
+            'created_at', 'updated_at'
         ]
         read_only_fields = ['id', 'confirmation_code', 'created_at', 'updated_at']
 
@@ -115,6 +117,15 @@ class BookingDetailSerializer(serializers.ModelSerializer):
                 'first_name': obj.provider.first_name,
                 'last_name': obj.provider.last_name,
             }
+        return None
+
+    def get_payment_status(self, obj):
+        """Return payment status if payment exists"""
+        try:
+            if hasattr(obj, 'payment'):
+                return obj.payment.status
+        except:
+            pass
         return None
 
 

@@ -4,6 +4,7 @@ from .views import (
     stripe_config,
     create_stripe_checkout_session,
     stripe_webhook,
+    verify_payment_session,
     payment_success,
     payment_cancel,
     payment_qr_data
@@ -18,6 +19,9 @@ urlpatterns = [
 
     # Stripe webhook endpoint (usually called by Stripe, not frontend)
     path('stripe/webhook/', stripe_webhook, name='stripe-webhook'),
+
+    # Verify payment session (fallback for local development without webhook)
+    path('stripe/verify-session/', verify_payment_session, name='verify-payment-session'),
 
     # Payment success/cancel pages
     path('success/', payment_success, name='payment-success'),

@@ -42,6 +42,7 @@ export interface Booking {
   status: BookingStatus
   confirmation_code: number // 4-digit code for job verification
   notes?: string
+  payment_status?: string | null
   created_at: string
   updated_at: string
   // Frontend-only fields (computed from encrypted data)
