@@ -29,6 +29,13 @@ export class PaymentsApiClient extends BaseApiClient {
   }
 
   /**
+   * Verify Stripe payment session and update payment status
+   */
+  async verifyPaymentSession(sessionId: string): Promise<ApiResponse<{ payment_status: string; amount?: string; paid_at?: string }>> {
+    return this.post<{ payment_status: string; amount?: string; paid_at?: string }>('/stripe/verify-session', { session_id: sessionId })
+  }
+
+  /**
    * Handle payment success callback
    */
   async handlePaymentSuccess(sessionId: string): Promise<ApiResponse<PaymentSuccessResponse>> {

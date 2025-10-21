@@ -167,8 +167,9 @@ class Payment(UUIDModel):
     def mark_as_paid(self, stripe_payment_intent_id: str = None,
                     payment_method: str = None):
         """Mark payment as paid"""
+        from django.utils import timezone
         self.status = 'paid'
-        self.paid_at = models.functions.Now()
+        self.paid_at = timezone.now()
         if stripe_payment_intent_id:
             self.stripe_payment_intent_id = stripe_payment_intent_id
         if payment_method:

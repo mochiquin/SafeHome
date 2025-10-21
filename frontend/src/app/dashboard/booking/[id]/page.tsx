@@ -1,6 +1,6 @@
 "use client";
 
-import { useParams, useRouter } from "next/navigation";
+import { useParams, useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useState } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -9,7 +9,6 @@ import { Separator } from "@/components/ui/separator";
 import {
   ArrowLeft,
   Calendar,
-  Clock,
   DollarSign,
   MapPin,
   Phone,
@@ -37,6 +36,7 @@ import {
 export default function BookingDetailPage() {
   const params = useParams();
   const router = useRouter();
+  const searchParams = useSearchParams();
   const bookingId = params.id as string;
 
   const [booking, setBooking] = useState<Booking | null>(null);
@@ -75,6 +75,54 @@ export default function BookingDetailPage() {
     fetchBooking();
   }, [bookingId, router]);
 
+  // Check for payment status in URL and verify with backend
+  useEffect(() => {
+    const verifyPayment = async () => {
+      const paymentStatus = searchParams.get('payment');
+
+      if (paymentStatus === 'success') {
+        // Get session_id from localStorage
+        const sessionId = localStorage.getItem('stripe_session_id');
+
+        if (sessionId) {
+          try {
+            // Verify payment with backend
+            const response = await paymentsApi.verifyPaymentSession(sessionId);
+
+            if (response.success && response.data?.payment_status === 'paid') {
+              toast.success('Payment completed successfully!');
+              // Clear session_id from localStorage
+              localStorage.removeItem('stripe_session_id');
+              // Refresh booking data to get updated payment_status
+              const bookingResponse = await bookingsApi.getBooking(bookingId);
+              if (bookingResponse.success && bookingResponse.data) {
+                setBooking(bookingResponse.data);
+              }
+            } else {
+              toast.warning('Payment verification pending');
+            }
+          } catch (error: any) {
+            console.error('Payment verification error:', error);
+            toast.error('Failed to verify payment');
+          }
+        } else {
+          toast.success('Payment completed!');
+        }
+
+        // Clean URL
+        router.replace(`/dashboard/booking/${bookingId}`, { scroll: false });
+      } else if (paymentStatus === 'cancelled') {
+        toast.error('Payment was cancelled');
+        // Clear session_id from localStorage
+        localStorage.removeItem('stripe_session_id');
+        // Clean URL
+        router.replace(`/dashboard/booking/${bookingId}`, { scroll: false });
+      }
+    };
+
+    verifyPayment();
+  }, [searchParams, bookingId, router]);
+
   const handlePayNow = async () => {
     setIsPayingNow(true);
     try {
@@ -82,6 +130,8 @@ export default function BookingDetailPage() {
         booking_id: bookingId
       });
       if (response.success && response.data) {
+        // Save session_id to localStorage for verification after return
+        localStorage.setItem('stripe_session_id', response.data.session_id);
         // Redirect to Stripe checkout
         window.location.href = response.data.checkout_url;
       } else {
@@ -150,7 +200,7 @@ export default function BookingDetailPage() {
     <div className="container mx-auto px-4 py-8 max-w-4xl">
       <Button
         variant="ghost"
-        onClick={() => router.back()}
+        onClick={() => router.push('/dashboard/customer?tab=bookings')}
         className="mb-6"
       >
         <ArrowLeft className="h-4 w-4 mr-2" />
@@ -358,14 +408,24 @@ export default function BookingDetailPage() {
           <Separator />
           <div className="flex gap-3 pt-4">
             {!isProvider && booking.status === 'confirmed' && (booking.provider_quote || booking.budget) && (
-              <Button
-                onClick={handlePayNow}
-                disabled={isPayingNow}
-                className="bg-green-600 hover:bg-green-700"
-              >
-                <DollarSign className="h-4 w-4 mr-2" />
-                {isPayingNow ? 'Redirecting...' : 'Pay Now'}
-              </Button>
+              booking.payment_status === 'paid' ? (
+                <Button
+                  disabled
+                  className="bg-green-600 hover:bg-green-700"
+                >
+                  <DollarSign className="h-4 w-4 mr-2" />
+                  Paid
+                </Button>
+              ) : (
+                <Button
+                  onClick={handlePayNow}
+                  disabled={isPayingNow}
+                  className="bg-green-600 hover:bg-green-700"
+                >
+                  <DollarSign className="h-4 w-4 mr-2" />
+                  {isPayingNow ? 'Redirecting...' : 'Pay Now'}
+                </Button>
+              )
             )}
 
             {(booking.status === 'pending' || booking.status === 'confirmed') && (

@@ -117,6 +117,16 @@ def create_stripe_checkout_session(request):
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR
             )
 
+        # Create or get Payment record
+        payment, created = Payment.objects.get_or_create(
+            booking=booking,
+            defaults={
+                'amount': booking.provider_quote if booking.provider_quote else booking.budget,
+                'currency': 'USD',
+                'status': 'pending'
+            }
+        )
+
         # Create Stripe checkout session
         checkout_session = stripe.checkout.Session.create(
             payment_method_types=['card'],
@@ -132,13 +142,17 @@ def create_stripe_checkout_session(request):
                 'quantity': 1,
             }],
             mode='payment',
-            success_url=f'{settings.FRONTEND_URL}/payment/success/?session_id={{CHECKOUT_SESSION_ID}}',
-            cancel_url=f'{settings.FRONTEND_URL}/payment/cancel/',
+            success_url=f'{settings.FRONTEND_URL}/dashboard/booking/{booking_id}?payment=success',
+            cancel_url=f'{settings.FRONTEND_URL}/dashboard/booking/{booking_id}?payment=cancelled',
             metadata={
                 'booking_id': str(booking_id),
                 'user_id': str(request.user.id),
             }
         )
+
+        # Save session_id to payment record
+        payment.stripe_session_id = checkout_session.id
+        payment.save()
 
         return success_response(
             data={
@@ -193,27 +207,28 @@ def stripe_webhook(request):
             booking_id = session.get('metadata', {}).get('booking_id')
             user_id = session.get('metadata', {}).get('user_id')
 
-            if booking_id and user_id:
+            if booking_id:
                 # Update payment status in database
                 try:
-                    payment = Payment.objects.get(
-                        booking__user_id=user_id,
-                        # Note: In real implementation, you'd link by booking_id or session_id
-                        # For now, we'll update all pending payments for this user
-                    )
+                    from bookings.models import Booking
+                    booking = Booking.objects.get(id=booking_id)
+                    payment = Payment.objects.get(booking=booking)
+
                     payment.mark_as_paid(
                         stripe_payment_intent_id=session.get('payment_intent'),
                         payment_method='stripe'
                     )
 
-                    print(f"Payment marked as paid for session: {session.id}")
+                    print(f"Payment marked as paid for booking: {booking_id}, session: {session.id}")
 
+                except Booking.DoesNotExist:
+                    print(f"No booking found for id: {booking_id}")
                 except Payment.DoesNotExist:
-                    print(f"No payment found for session: {session.id}")
+                    print(f"No payment found for booking: {booking_id}")
                 except Exception as e:
                     print(f"Error updating payment: {str(e)}")
             else:
-                print(f"Missing metadata in session: {session.id}")
+                print(f"Missing booking_id in session metadata: {session.id}")
 
         elif event['type'] == 'payment_intent.payment_failed':
             payment_intent = event['data']['object']
@@ -306,6 +321,102 @@ def payment_qr_data(request, payment_id):
         return error_response(
             message='Payment not found',
             status_code=status.HTTP_404_NOT_FOUND
+        )
+    except Exception as e:
+        return error_response(
+            message=f'Internal error: {str(e)}',
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR
+        )
+
+
+@api_view(['POST'])
+@authentication_classes([JWTCookieAuthentication])
+@permission_classes([permissions.IsAuthenticated])
+@parser_classes_decorator([EncryptedJSONParser])
+def verify_payment_session(request):
+    """
+    Verify Stripe session and update payment status
+    This is used as a fallback when webhook is not available (e.g., local development)
+    """
+    try:
+        session_id = request.data.get('session_id')
+        if not session_id:
+            return error_response(
+                message='session_id is required',
+                status_code=status.HTTP_400_BAD_REQUEST
+            )
+
+        # Initialize Stripe
+        stripe.api_key = StripeConfig.get_secret_key()
+
+        # Retrieve session from Stripe
+        session = stripe.checkout.Session.retrieve(session_id)
+
+        # Check if payment was successful
+        if session.payment_status == 'paid':
+            # Get booking_id from metadata
+            booking_id = session.metadata.get('booking_id')
+
+            if not booking_id:
+                return error_response(
+                    message='No booking_id in session metadata',
+                    status_code=status.HTTP_400_BAD_REQUEST
+                )
+
+            # Get booking and payment
+            from bookings.models import Booking
+            try:
+                booking = Booking.objects.get(id=booking_id)
+
+                # Verify user owns this booking
+                if booking.user != request.user:
+                    return error_response(
+                        message='Unauthorized',
+                        status_code=status.HTTP_403_FORBIDDEN
+                    )
+
+                # Get or create payment record
+                payment, created = Payment.objects.get_or_create(
+                    booking=booking,
+                    defaults={
+                        'amount': booking.provider_quote if booking.provider_quote else booking.budget,
+                        'currency': 'USD',
+                        'status': 'pending'
+                    }
+                )
+
+                # Mark as paid if not already
+                if payment.status != 'paid':
+                    payment.mark_as_paid(
+                        stripe_payment_intent_id=session.payment_intent,
+                        payment_method='stripe'
+                    )
+
+                return success_response(
+                    data={
+                        'payment_status': 'paid',
+                        'amount': str(payment.amount),
+                        'paid_at': payment.paid_at.isoformat() if payment.paid_at else None,
+                    },
+                    message='Payment verified and updated successfully'
+                )
+
+            except Booking.DoesNotExist:
+                return error_response(
+                    message='Booking not found',
+                    status_code=status.HTTP_404_NOT_FOUND
+                )
+
+        else:
+            return success_response(
+                data={'payment_status': session.payment_status},
+                message=f'Payment status: {session.payment_status}'
+            )
+
+    except stripe.error.StripeError as e:
+        return error_response(
+            message=f'Stripe error: {str(e)}',
+            status_code=status.HTTP_400_BAD_REQUEST
         )
     except Exception as e:
         return error_response(
