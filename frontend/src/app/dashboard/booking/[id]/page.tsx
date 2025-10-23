@@ -1,463 +1,139 @@
 "use client";
 
-import { useParams, useRouter, useSearchParams } from "next/navigation";
-import { useEffect, useState } from "react";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
+import { useParams } from "next/navigation";
+import { Card, CardContent } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
+import { useBookingDetail } from "@/hooks/use-booking-detail";
 import {
-  ArrowLeft,
-  Calendar,
-  DollarSign,
-  MapPin,
-  Phone,
-  User,
-  FileText,
-  Home,
-  KeyRound
-} from "lucide-react";
-import { bookingsApi, authApi, paymentsApi } from "@/lib/apis";
-import type { Booking } from "@/lib/types/booking";
-import { toast } from "sonner";
-import { SimpleMap } from "@/components/maps";
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-  AlertDialogTrigger,
-} from "@/components/ui/alert-dialog";
+  BookingDetailHeader,
+  BookingServiceInfo,
+  BookingScheduleInfo,
+  BookingLocationInfo,
+  BookingContactInfo,
+  BookingConfirmationCode,
+  BookingProviderInfo,
+  BookingNotesInfo,
+  BookingActions
+} from "@/components/dashboard/booking-detail";
 
+/**
+ * Booking detail page component
+ * Displays comprehensive information about a specific booking including
+ * service details, schedule, location, payment status, and actions
+ */
 export default function BookingDetailPage() {
   const params = useParams();
-  const router = useRouter();
-  const searchParams = useSearchParams();
   const bookingId = params.id as string;
 
-  const [booking, setBooking] = useState<Booking | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
-  const [isCancelling, setIsCancelling] = useState(false);
-  const [isProvider, setIsProvider] = useState(false);
-  const [isPayingNow, setIsPayingNow] = useState(false);
+  // Use custom hook to manage all booking detail logic
+  const {
+    booking,
+    isProvider,
+    isLoading,
+    isPayingNow,
+    isCancelling,
+    handlePayNow,
+    handleCancelBooking,
+    handleBack
+  } = useBookingDetail(bookingId);
 
-  useEffect(() => {
-    const fetchBooking = async () => {
-      try {
-        // Fetch both booking and current user info
-        const [bookingResponse, userResponse] = await Promise.all([
-          bookingsApi.getBooking(bookingId),
-          authApi.me()
-        ]);
-
-        if (bookingResponse.success && bookingResponse.data) {
-          setBooking(bookingResponse.data);
-
-          // Check if current user is a provider
-          if (userResponse.success && userResponse.data) {
-            setIsProvider(userResponse.data.role === 'provider');
-          }
-        } else {
-          throw new Error(bookingResponse.message || 'Failed to fetch booking');
-        }
-      } catch (error: any) {
-        toast.error(error.message || 'Failed to fetch booking details');
-        router.push('/dashboard/customer?tab=bookings');
-      } finally {
-        setIsLoading(false);
-      }
-    };
-
-    fetchBooking();
-  }, [bookingId, router]);
-
-  // Check for payment status in URL and verify with backend
-  useEffect(() => {
-    const verifyPayment = async () => {
-      const paymentStatus = searchParams.get('payment');
-
-      if (paymentStatus === 'success') {
-        // Get session_id from localStorage
-        const sessionId = localStorage.getItem('stripe_session_id');
-
-        if (sessionId) {
-          try {
-            // Verify payment with backend
-            const response = await paymentsApi.verifyPaymentSession(sessionId);
-
-            if (response.success && response.data?.payment_status === 'paid') {
-              toast.success('Payment completed successfully!');
-              // Clear session_id from localStorage
-              localStorage.removeItem('stripe_session_id');
-              // Refresh booking data to get updated payment_status
-              const bookingResponse = await bookingsApi.getBooking(bookingId);
-              if (bookingResponse.success && bookingResponse.data) {
-                setBooking(bookingResponse.data);
-              }
-            } else {
-              toast.warning('Payment verification pending');
-            }
-          } catch (error: any) {
-            console.error('Payment verification error:', error);
-            toast.error('Failed to verify payment');
-          }
-        } else {
-          toast.success('Payment completed!');
-        }
-
-        // Clean URL
-        router.replace(`/dashboard/booking/${bookingId}`, { scroll: false });
-      } else if (paymentStatus === 'cancelled') {
-        toast.error('Payment was cancelled');
-        // Clear session_id from localStorage
-        localStorage.removeItem('stripe_session_id');
-        // Clean URL
-        router.replace(`/dashboard/booking/${bookingId}`, { scroll: false });
-      }
-    };
-
-    verifyPayment();
-  }, [searchParams, bookingId, router]);
-
-  const handlePayNow = async () => {
-    setIsPayingNow(true);
-    try {
-      const response = await paymentsApi.createStripeCheckout({
-        booking_id: bookingId
-      });
-      if (response.success && response.data) {
-        // Save session_id to localStorage for verification after return
-        localStorage.setItem('stripe_session_id', response.data.session_id);
-        // Redirect to Stripe checkout
-        window.location.href = response.data.checkout_url;
-      } else {
-        throw new Error(response.message || 'Failed to create checkout session');
-      }
-    } catch (error: any) {
-      toast.error(error.message || 'Failed to initiate payment');
-      setIsPayingNow(false);
-    }
-  };
-
-  const handleCancelBooking = async () => {
-    setIsCancelling(true);
-    try {
-      const response = await bookingsApi.cancelBooking(bookingId);
-      if (response.success) {
-        toast.success('Booking cancelled successfully');
-        router.push('/dashboard/customer?tab=bookings');
-      } else {
-        throw new Error(response.message || 'Failed to cancel booking');
-      }
-    } catch (error: any) {
-      toast.error(error.message || 'Failed to cancel booking');
-    } finally {
-      setIsCancelling(false);
-    }
-  };
-
+  // Show loading state while fetching booking data
   if (isLoading) {
     return (
       <div className="container mx-auto px-4 py-8">
         <Card>
-          <CardHeader>
-            <CardTitle>Loading...</CardTitle>
-            <CardDescription>Fetching booking details</CardDescription>
-          </CardHeader>
+          <CardContent className="p-6">
+            <p className="text-center text-muted-foreground">Loading booking details...</p>
+          </CardContent>
         </Card>
       </div>
     );
   }
 
+  // Return null if booking data is not available
   if (!booking) {
     return null;
   }
 
-  const startDate = new Date(booking.start_time);
-  const endDate = new Date(startDate.getTime() + booking.duration_hours * 60 * 60 * 1000);
-
-  const statusColors = {
-    confirmed: "bg-blue-100 text-blue-800 border-blue-200",
-    completed: "bg-green-100 text-green-800 border-green-200",
-    pending: "bg-yellow-100 text-yellow-800 border-yellow-200",
-    cancelled: "bg-red-100 text-red-800 border-red-200",
-    in_progress: "bg-orange-100 text-orange-800 border-orange-200"
-  };
-
-  const statusLabels = {
-    confirmed: "Confirmed",
-    completed: "Completed",
-    pending: "Pending",
-    cancelled: "Cancelled",
-    in_progress: "In Progress"
-  };
-
   return (
     <div className="container mx-auto px-4 py-8 max-w-4xl">
-      <Button
-        variant="ghost"
-        onClick={() => router.push('/dashboard/customer?tab=bookings')}
-        className="mb-6"
-      >
-        <ArrowLeft className="h-4 w-4 mr-2" />
-        Back
-      </Button>
+      <BookingDetailHeader
+        bookingId={booking.id}
+        status={booking.status}
+        onBack={handleBack}
+      />
 
       <Card>
-        <CardHeader>
-          <div className="flex items-start justify-between">
-            <div>
-              <CardTitle className="text-2xl mb-2">Booking Details</CardTitle>
-              <CardDescription>Booking ID: {booking.id}</CardDescription>
-            </div>
-            <Badge
-              variant="outline"
-              className={`${statusColors[booking.status as keyof typeof statusColors]} font-medium`}
-            >
-              {statusLabels[booking.status as keyof typeof statusLabels]}
-            </Badge>
-          </div>
-        </CardHeader>
-        <CardContent className="space-y-6">
-          {/* Service Information */}
-          <div>
-            <h3 className="text-lg font-semibold mb-4 flex items-center gap-2">
-              <Home className="h-5 w-5" />
-              Service Information
-            </h3>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div>
-                <p className="text-sm text-muted-foreground">Service Type</p>
-                <p className="font-medium">{booking.service_type_display || booking.service_type}</p>
-              </div>
-              {booking.budget && (
-                <div>
-                  <p className="text-sm text-muted-foreground">Customer Budget</p>
-                  <p className="font-medium">${Number(booking.budget).toFixed(2)}</p>
-                </div>
-              )}
-            </div>
-          </div>
+        <CardContent className="space-y-6 pt-6">
+          {/* Display service type and budget information */}
+          <BookingServiceInfo
+            serviceType={booking.service_type}
+            serviceTypeDisplay={booking.service_type_display}
+            budget={booking.budget}
+          />
 
           <Separator />
 
-          {/* Schedule Information */}
-          <div>
-            <h3 className="text-lg font-semibold mb-4 flex items-center gap-2">
-              <Calendar className="h-5 w-5" />
-              Schedule
-            </h3>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div>
-                <p className="text-sm text-muted-foreground">Date</p>
-                <p className="font-medium">
-                  {startDate.toLocaleDateString('en-US', {
-                    weekday: 'long',
-                    year: 'numeric',
-                    month: 'long',
-                    day: 'numeric'
-                  })}
-                </p>
-              </div>
-              <div>
-                <p className="text-sm text-muted-foreground">Time</p>
-                <p className="font-medium">
-                  {startDate.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })} - {endDate.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })}
-                </p>
-              </div>
-              <div>
-                <p className="text-sm text-muted-foreground">Duration</p>
-                <p className="font-medium">{booking.duration_hours} hour(s)</p>
-              </div>
-            </div>
-          </div>
+          {/* Display booking schedule: date, time, and duration */}
+          <BookingScheduleInfo
+            startTime={booking.start_time}
+            durationHours={booking.duration_hours}
+          />
 
           <Separator />
 
-          {/* Location Information */}
-          <div>
-            <h3 className="text-lg font-semibold mb-4 flex items-center gap-2">
-              <MapPin className="h-5 w-5" />
-              Location
-            </h3>
-            <div className="space-y-4">
-              <div>
-                <p className="text-sm text-muted-foreground">Address</p>
-                <p className="font-medium">{booking.address}</p>
-              </div>
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                <div>
-                  <p className="text-sm text-muted-foreground">City</p>
-                  <p className="font-medium">{booking.city}</p>
-                </div>
-                {booking.state && (
-                  <div>
-                    <p className="text-sm text-muted-foreground">State</p>
-                    <p className="font-medium">{booking.state}</p>
-                  </div>
-                )}
-                <div>
-                  <p className="text-sm text-muted-foreground">Country</p>
-                  <p className="font-medium">{booking.country}</p>
-                </div>
-              </div>
-
-              {/* Map Display */}
-              <div className="mt-4">
-                <p className="text-sm text-muted-foreground mb-2">Map</p>
-                <SimpleMap
-                  address={booking.address ? `${booking.address}, ${booking.city || ''}` : booking.city}
-                  height="250px"
-                />
-              </div>
-            </div>
-          </div>
+          {/* Display location details with interactive map */}
+          <BookingLocationInfo
+            address={booking.address}
+            city={booking.city}
+            state={booking.state}
+            country={booking.country}
+          />
 
           <Separator />
 
-          {/* Contact Information */}
-          <div>
-            <h3 className="text-lg font-semibold mb-4 flex items-center gap-2">
-              <Phone className="h-5 w-5" />
-              Contact
-            </h3>
-            <div>
-              <p className="text-sm text-muted-foreground">Phone Number</p>
-              <p className="font-medium">{booking.phone}</p>
-            </div>
-          </div>
+          {/* Display contact phone number */}
+          <BookingContactInfo phone={booking.phone} />
 
-          <Separator />
-
-          {/* Confirmation Code - Only show to customers */}
+          {/* Show confirmation code only to customers (not providers) */}
           {!isProvider && (
             <>
-              <div>
-                <h3 className="text-lg font-semibold mb-4 flex items-center gap-2">
-                  <KeyRound className="h-5 w-5" />
-                  Confirmation Code
-                </h3>
-                <div className="bg-blue-50 border-2 border-blue-200 rounded-lg p-4">
-                  <p className="text-sm text-muted-foreground mb-2">
-                    Share this code with your provider to start the job
-                  </p>
-                  <p className="text-3xl font-bold text-blue-600 tracking-widest">
-                    {booking.confirmation_code}
-                  </p>
-                </div>
-              </div>
-
               <Separator />
+              <BookingConfirmationCode confirmationCode={booking.confirmation_code} />
             </>
           )}
 
-          {/* Provider Information */}
+          {/* Show provider information only to customers when provider is assigned */}
           {!isProvider && booking.provider && (
             <>
               <Separator />
-              <div>
-                <h3 className="text-lg font-semibold mb-4 flex items-center gap-2">
-                  <User className="h-5 w-5" />
-                  Provider
-                </h3>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div>
-                    <p className="text-sm text-muted-foreground">Provider Name</p>
-                    <p className="font-medium">
-                      {booking.provider.first_name || booking.provider.last_name
-                        ? `${booking.provider.first_name || ''} ${booking.provider.last_name || ''}`.trim()
-                        : 'Not provided'}
-                    </p>
-                  </div>
-                  <div>
-                    <p className="text-sm text-muted-foreground">Provider Email</p>
-                    <p className="font-medium">{booking.provider.email}</p>
-                  </div>
-                  {booking.provider_quote && (
-                    <div>
-                      <p className="text-sm text-muted-foreground">Provider Quote</p>
-                      <p className="font-medium text-green-600 text-lg">
-                        ${Number(booking.provider_quote).toFixed(2)}
-                      </p>
-                    </div>
-                  )}
-                </div>
-              </div>
+              <BookingProviderInfo
+                provider={booking.provider}
+                providerQuote={booking.provider_quote}
+              />
             </>
           )}
 
-          {/* Notes */}
+          {/* Display additional notes if provided */}
           {booking.notes && (
             <>
               <Separator />
-              <div>
-                <h3 className="text-lg font-semibold mb-4 flex items-center gap-2">
-                  <FileText className="h-5 w-5" />
-                  Additional Notes
-                </h3>
-                <p className="text-muted-foreground">{booking.notes}</p>
-              </div>
+              <BookingNotesInfo notes={booking.notes} />
             </>
           )}
 
-          {/* Actions */}
+          {/* Action buttons: Payment and cancellation */}
           <Separator />
-          <div className="flex gap-3 pt-4">
-            {!isProvider && booking.status === 'confirmed' && (booking.provider_quote || booking.budget) && (
-              booking.payment_status === 'paid' ? (
-                <Button
-                  disabled
-                  className="bg-green-600 hover:bg-green-700"
-                >
-                  <DollarSign className="h-4 w-4 mr-2" />
-                  Paid
-                </Button>
-              ) : (
-                <Button
-                  onClick={handlePayNow}
-                  disabled={isPayingNow}
-                  className="bg-green-600 hover:bg-green-700"
-                >
-                  <DollarSign className="h-4 w-4 mr-2" />
-                  {isPayingNow ? 'Redirecting...' : 'Pay Now'}
-                </Button>
-              )
-            )}
-
-            {(booking.status === 'pending' || booking.status === 'confirmed') && (
-              <AlertDialog>
-                <AlertDialogTrigger asChild>
-                  <Button variant="destructive" disabled={isCancelling}>
-                    {isCancelling ? 'Cancelling...' : 'Cancel Booking'}
-                  </Button>
-                </AlertDialogTrigger>
-                <AlertDialogContent>
-                  <AlertDialogHeader>
-                    <AlertDialogTitle>Cancel Booking</AlertDialogTitle>
-                    <AlertDialogDescription>
-                      Are you sure you want to cancel this booking? This action cannot be undone.
-                    </AlertDialogDescription>
-                  </AlertDialogHeader>
-                  <AlertDialogFooter>
-                    <AlertDialogCancel>No, Keep It</AlertDialogCancel>
-                    <AlertDialogAction
-                      onClick={handleCancelBooking}
-                      className="bg-red-600 hover:bg-red-700"
-                    >
-                      Yes, Cancel Booking
-                    </AlertDialogAction>
-                  </AlertDialogFooter>
-                </AlertDialogContent>
-              </AlertDialog>
-            )}
-          </div>
+          <BookingActions
+            booking={booking}
+            isProvider={isProvider}
+            onPayNow={handlePayNow}
+            onCancel={handleCancelBooking}
+            isPayingNow={isPayingNow}
+            isCancelling={isCancelling}
+          />
         </CardContent>
       </Card>
     </div>
   );
 }
-
