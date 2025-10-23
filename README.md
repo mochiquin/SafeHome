@@ -113,24 +113,6 @@ docker-compose ps
 
 ### 本地开发设置
 
-#### 后端开发
-
-```bash
-cd backend
-
-# 创建虚拟环境
-python -m venv venv
-source venv/bin/activate  # Windows: venv\Scripts\activate
-
-# 安装依赖
-pip install -r requirements.txt
-
-# 运行数据库迁移
-python manage.py migrate
-
-# 启动开发服务器
-python manage.py runserver
-```
 
 #### 前端开发
 
@@ -158,17 +140,6 @@ python manage.py createsuperuser
 
 # 填充测试数据
 python manage.py seed
-```
-
-### 运行测试
-
-```bash
-# 运行所有测试
-python manage.py test
-
-# 运行特定测试
-python manage.py test tests.test_booking_encryption
-python manage.py test tests.test_crypto
 ```
 
 ## 🔐 安全特性
