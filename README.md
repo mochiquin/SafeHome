@@ -1,90 +1,90 @@
 # SafeHome 🏠
 
-一个现代化的家庭服务平台，专注于隐私保护和安全性，为用户提供便捷的家庭服务预订体验。
+A modern home services platform focused on privacy protection and security, providing users with a convenient home service booking experience.
 
-## 📋 项目概述
+## 📋 Project Overview
 
-SafeHome是一个全栈Web应用，旨在连接用户与家庭服务提供商。项目特别注重数据隐私和安全，采用多层加密保护用户敏感信息，并集成了现代化的支付解决方案。
+SafeHome is a full-stack web application designed to connect users with home service providers. The project places special emphasis on data privacy and security, utilizing multi-layer encryption to protect sensitive user information and integrating modern payment solutions.
 
-### 🌟 核心功能
+### 🌟 Core Features
 
-- **用户管理**：注册、登录、角色管理（客户/服务商/管理员）
-- **服务预订**：家庭服务发布、在线预订、时间安排
-- **支付系统**：Stripe集成、多种支付方式、二维码支付
-- **隐私保护**：敏感信息加密存储、GDPR合规
-- **疫情安全**：疫苗接种状态追踪、地理位置筛选
+- **User Management**: Registration, login, role management (customer/provider/admin)
+- **Service Booking**: Home service listing, online booking, scheduling
+- **Payment System**: Stripe integration
+- **Privacy Protection**: Encrypted storage of sensitive information, GDPR compliance
+- **COVID Safety**: Vaccination status tracking, geographic filtering
 
-## 🛠 技术栈
+## 🛠 Tech Stack
 
-### 后端
-- **框架**：Django 4.2 + Django REST Framework
-- **数据库**：MySQL 8.0
-- **认证**：JWT + HttpOnly Cookie
-- **加密**：Fernet对称加密 + PBKDF2密钥派生
-- **支付**：Stripe API集成
+### Backend
+- **Framework**: Django 4.2 + Django REST Framework
+- **Database**: MySQL 8.0
+- **Authentication**: JWT + HttpOnly Cookie
+- **Encryption**: Fernet symmetric encryption + PBKDF2 key derivation
+- **Payments**: Stripe API integration
 
-### 前端
-- **框架**：Next.js 14 + React 18
-- **语言**：TypeScript
-- **样式**：Tailwind CSS
-- **状态管理**：Zustand
-- **数据获取**：TanStack React Query
+### Frontend
+- **Framework**: Next.js 14 + React 18
+- **Language**: TypeScript
+- **Styling**: Tailwind CSS
+- **State Management**: Zustand
+- **Data Fetching**: TanStack React Query
 
-### 部署
-- **容器化**：Docker + Docker Compose
-- **数据库**：MySQL容器
-- **反向代理**：Nginx（生产环境）
+### Deployment
+- **Containerization**: Docker + Docker Compose
+- **Database**: MySQL container
+- **Reverse Proxy**: Nginx (production)
 
-## 🏗 项目架构
+## 🏗 Project Architecture
 
 ```
 SafeHome/
-├── backend/                 # Django后端
-│   ├── accounts/           # 用户管理模块
-│   ├── services/           # 服务管理模块
-│   ├── bookings/           # 预订系统模块
-│   ├── payments/           # 支付处理模块
-│   ├── covid/              # 疫情相关功能
-│   ├── core/               # 核心工具和中间件
-│   └── tests/              # 测试文件
-├── frontend/               # Next.js前端
-│   ├── app/                # App Router结构
-│   └── components/         # React组件
-├── compose/                # Docker配置
-└── tools/                  # 开发工具
+├── backend/                 # Django backend
+│   ├── accounts/           # User management module
+│   ├── services/           # Service management module
+│   ├── bookings/           # Booking system module
+│   ├── payments/           # Payment processing module
+│   ├── covid/              # COVID-related features
+│   ├── core/               # Core utilities and middleware
+│   └── tests/              # Test files
+├── frontend/               # Next.js frontend
+│   ├── app/                # App Router structure
+│   └── components/         # React components
+├── compose/                # Docker configuration
+└── tools/                  # Development tools
 ```
 
-## 🚀 快速开始
+## 🚀 Quick Start
 
-### 环境要求
+### Prerequisites
 
 - Docker & Docker Compose
-- Node.js 18+ (本地开发)
-- Python 3.9+ (本地开发)
+- Node.js 18+ (local development)
+- Python 3.9+ (local development)
 
-### 1. 克隆项目
+### 1. Clone the Project
 
 ```bash
 git clone <repository-url>
 cd SafeHome
 ```
 
-### 2. 生成安全密钥
+### 2. Generate Security Keys
 
 ```bash
-# 生成Django密钥、Fernet密钥和JWT签名密钥
+# Generate Django secret key, Fernet key, and JWT signing key
 python tools/generate-keys.py
 ```
 
-### 3. 配置环境变量
+### 3. Configure Environment Variables
 
 ```bash
-# 复制环境变量模板
+# Copy environment variable template
 cp compose/.env.example compose/.env
 
 
-# 编辑.env文件，填入生成的密钥和API配置
-# 必须配置的变量：
+# Edit .env file and fill in the generated keys and API configuration
+# Required variables:
 # - DJANGO_SECRET_KEY
 # - FERNET_KEY
 # - JWT_SIGNING_KEY
@@ -92,223 +92,193 @@ cp compose/.env.example compose/.env
 # - STRIPE_SECRET_KEY
 ```
 
-### 4. 启动服务
+### 4. Start Services
 
 ```bash
-# 使用Docker Compose启动所有服务
+# Start all services using Docker Compose
 cd compose
 docker-compose up -d
 
-# 查看服务状态
+# Check service status
 docker-compose ps
 ```
 
-### 5. 访问应用
+### 5. Access the Application
 
-- **前端**：http://localhost:3000
-- **后端API**：http://localhost:8000
-- **API文档**：http://localhost:8000/api/schema/swagger-ui/
+- **Frontend**: http://localhost:3000
+- **Backend API**: http://localhost:8000
+- **API Documentation**: http://localhost:8000/api/schema/swagger-ui/
 
-## 🔧 开发指南
+## 🔧 Development Guide
 
-### 本地开发设置
+### Local Development Setup
 
 
-#### 前端开发
+#### Frontend Development
 
 ```bash
 cd frontend
 
-# 安装依赖
+# Install dependencies
 pnpm install
 
-# 启动开发服务器
+# Start development server
 pnpm dev
 ```
 
-### 数据库管理
+### Database Management
 
 ```bash
-# 创建迁移文件
+# Create migration files
 python manage.py makemigrations
 
-# 应用迁移
+# Apply migrations
 python manage.py migrate
 
-# 创建超级用户
+# Create superuser
 python manage.py createsuperuser
 
-# 填充测试数据
+# Seed test data
 python manage.py seed
 ```
 
-## 🔐 安全特性
+## 🔐 Security Features
 
-### 数据加密
-- **Fernet对称加密**：保护用户地址、电话号码等敏感信息
-- **PBKDF2密钥派生**：安全的密钥生成机制
-- **多轮加密测试**：确保密文不可读性
+### Data Encryption
+- **Fernet Symmetric Encryption**: Protects sensitive user information such as addresses and phone numbers
+- **PBKDF2 Key Derivation**: Secure key generation mechanism
+- **Multi-round Encryption Testing**: Ensures ciphertext unreadability
 
-### 认证安全
-- **JWT令牌**：30分钟访问令牌 + 7天刷新令牌
-- **HttpOnly Cookie**：防止XSS攻击
-- **令牌轮换**：自动刷新和黑名单机制
+### Authentication Security
+- **JWT Tokens**: 30-minute access token + 7-day refresh token
+- **HttpOnly Cookie**: Prevents XSS attacks
+- **Token Rotation**: Automatic refresh and blacklist mechanism
 
-### 隐私保护
-- **同意日志**：GDPR合规的用户同意追踪
-- **IP记录**：请求来源追踪
-- **数据最小化**：只收集必要信息
+### Privacy Protection
+- **Consent Logging**: GDPR-compliant user consent tracking
+- **IP Recording**: Request origin tracking
+- **Data Minimization**: Collects only necessary information
 
-### 支付安全
-- **Stripe集成**：PCI DSS合规的支付处理
-- **令牌化**：敏感支付信息不本地存储
-- **支付验证**：完整的支付生命周期管理
+### Payment Security
+- **Stripe Integration**: PCI DSS compliant payment processing
+- **Tokenization**: Sensitive payment information not stored locally
+- **Payment Verification**: Complete payment lifecycle management
 
-## 📚 API文档
+## 📚 API Documentation
 
-### 认证端点
+### Authentication Endpoints
 
 ```http
-POST /api/auth/register     # 用户注册
-POST /api/auth/login        # 用户登录
-POST /api/auth/logout       # 用户登出
-POST /api/auth/refresh      # 刷新令牌
-GET  /api/auth/me          # 获取用户信息
+POST /api/auth/register     # User registration
+POST /api/auth/login        # User login
+POST /api/auth/logout       # User logout
+POST /api/auth/refresh      # Refresh token
+GET  /api/auth/me          # Get user information
 ```
 
-### 服务端点
+### Service Endpoints
 
 ```http
-GET    /api/services/       # 获取服务列表
-POST   /api/services/       # 创建服务（管理员）
-GET    /api/services/{id}/  # 获取服务详情
-PUT    /api/services/{id}/  # 更新服务（管理员）
-DELETE /api/services/{id}/  # 删除服务（管理员）
+GET    /api/services/       # Get service list
+POST   /api/services/       # Create service (admin)
+GET    /api/services/{id}/  # Get service details
+PUT    /api/services/{id}/  # Update service (admin)
+DELETE /api/services/{id}/  # Delete service (admin)
 ```
 
-### 预订端点
+### Booking Endpoints
 
 ```http
-GET    /api/bookings/       # 获取用户预订
-POST   /api/bookings/       # 创建预订
-GET    /api/bookings/{id}/  # 获取预订详情
-PUT    /api/bookings/{id}/  # 更新预订
-DELETE /api/bookings/{id}/  # 取消预订
+GET    /api/bookings/       # Get user bookings
+POST   /api/bookings/       # Create booking
+GET    /api/bookings/{id}/  # Get booking details
+PUT    /api/bookings/{id}/  # Update booking
+DELETE /api/bookings/{id}/  # Cancel booking
 ```
 
-### 支付端点
+### Payment Endpoints
 
 ```http
-POST /api/payments/create-checkout-session/  # 创建支付会话
+POST /api/payments/create-checkout-session/  # Create checkout session
 POST /api/payments/webhook/                   # Stripe Webhook
-GET  /api/payments/qr/{token}/               # 获取支付二维码
+GET  /api/payments/qr/{token}/               # Get payment QR code
 ```
 
-## 🐳 部署指南
+## 🐳 Deployment Guide
 
-### Docker部署
+### Docker Deployment
 
 ```bash
-# 生产环境部署
+# Production deployment
 docker-compose -f docker-compose.prod.yml up -d
 
-# 查看日志
+# View logs
 docker-compose logs -f
 
-# 停止服务
+# Stop services
 docker-compose down
 ```
 
-### 环境变量配置
+### Environment Variable Configuration
 
-生产环境需要配置以下关键变量：
+Production environment requires the following key variables:
 
 ```bash
-# 安全配置
+# Security configuration
 DJANGO_DEBUG=False
-DJANGO_SECRET_KEY=<生产密钥>
-FERNET_KEY=<生产加密密钥>
-JWT_SIGNING_KEY=<生产JWT密钥>
+DJANGO_SECRET_KEY=<production-key>
+FERNET_KEY=<production-encryption-key>
+JWT_SIGNING_KEY=<production-jwt-key>
 
-# 数据库配置
-MYSQL_PASSWORD=<强密码>
-MYSQL_ROOT_PASSWORD=<强密码>
+# Database configuration
+MYSQL_PASSWORD=<strong-password>
+MYSQL_ROOT_PASSWORD=<strong-password>
 
-# Stripe配置
-STRIPE_SECRET_KEY=<生产密钥>
-STRIPE_WEBHOOK_SECRET=<Webhook密钥>
+# Stripe configuration
+STRIPE_SECRET_KEY=<production-key>
+STRIPE_WEBHOOK_SECRET=<webhook-secret>
 
-# 域名配置
+# Domain configuration
 DJANGO_ALLOWED_HOSTS=yourdomain.com
 DJANGO_CORS_ALLOWED_ORIGINS=https://yourdomain.com
 ```
 
-## 🧪 测试
+## 🧪 Testing
 
-项目包含全面的测试套件：
+The project includes a comprehensive test suite:
 
 ```bash
-# 加密功能测试
+# Encryption functionality tests
 python tests/test_crypto.py
 python tests/test_booking_encryption.py
 
-# API测试
+# API tests
 python tests/test_auth_api.py
 python tests/test_booking_api.py
 python tests/test_services_api.py
 
-# 支付测试
+# Payment tests
 python tests/test_payment_model.py
 python tests/test_stripe_checkout.py
 
-# 疫情功能测试
+# COVID functionality tests
 python tests/test_covid_restrictions.py
 ```
 
-## 📝 开发工具
+## 📝 Development Tools
 
-### 密钥生成工具
+### Key Generation Tool
 
 ```bash
-# 生成所有必需的密钥
+# Generate all required keys
 python tools/generate-keys.py
 ```
 
-### 数据库种子数据
+### Database Seed Data
 
 ```bash
-# 填充测试数据
+# Populate test data
 python manage.py seed
 ```
 
-## 🤝 贡献指南
-
-1. Fork 项目
-2. 创建功能分支 (`git checkout -b feature/AmazingFeature`)
-3. 提交更改 (`git commit -m 'Add some AmazingFeature'`)
-4. 推送到分支 (`git push origin feature/AmazingFeature`)
-5. 打开 Pull Request
-
-## 📄 许可证
-
-本项目采用 MIT 许可证 - 查看 [LICENSE](LICENSE) 文件了解详情。
-
-## 🆘 支持
-
-如果您遇到问题或有疑问，请：
-
-1. 查看 [Issues](../../issues) 页面
-2. 创建新的 Issue
-3. 联系开发团队
-
-## 🔮 未来计划
-
-- [ ] 移动端应用开发
-- [ ] 实时通知系统
-- [ ] 服务商评价系统
-- [ ] 多语言支持
-- [ ] 高级分析仪表板
-
----
-
-**SafeHome** - 让家庭服务更安全、更便捷 🏠✨
+**SafeHome** - Making home services safer and more convenient 🏠✨
