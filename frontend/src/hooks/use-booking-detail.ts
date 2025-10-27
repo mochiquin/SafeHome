@@ -27,6 +27,8 @@ export function useBookingDetail(bookingId: string) {
    */
   const fetchBooking = useCallback(async () => {
     setIsLoading(true);
+    let userRole = 'customer'; // default to customer
+
     try {
       // Fetch both booking and current user info in parallel
       const [bookingResponse, userResponse] = await Promise.all([
@@ -34,19 +36,22 @@ export function useBookingDetail(bookingId: string) {
         authApi.me()
       ]);
 
+      // Determine if current user is a provider
+      if (userResponse.success && userResponse.data) {
+        const userIsProvider = userResponse.data.role === 'provider';
+        setIsProvider(userIsProvider);
+        userRole = userIsProvider ? 'provider' : 'customer';
+      }
+
       if (bookingResponse.success && bookingResponse.data) {
         setBooking(bookingResponse.data);
-
-        // Determine if current user is a provider
-        if (userResponse.success && userResponse.data) {
-          setIsProvider(userResponse.data.role === 'provider');
-        }
       } else {
         throw new Error(bookingResponse.message || 'Failed to fetch booking');
       }
     } catch (error: any) {
       toast.error(error.message || 'Failed to fetch booking details');
-      router.push('/dashboard/customer?tab=bookings');
+      // Navigate to appropriate dashboard based on user role (determined earlier)
+      router.push(`/dashboard/${userRole}?tab=bookings`);
     } finally {
       setIsLoading(false);
     }
@@ -119,7 +124,7 @@ export function useBookingDetail(bookingId: string) {
       const response = await paymentsApi.createStripeCheckout({
         booking_id: bookingId
       });
-      
+
       if (response.success && response.data) {
         // Save session_id to localStorage for verification after return
         localStorage.setItem('stripe_session_id', response.data.session_id);
@@ -142,10 +147,12 @@ export function useBookingDetail(bookingId: string) {
     setIsCancelling(true);
     try {
       const response = await bookingsApi.cancelBooking(bookingId);
-      
+
       if (response.success) {
         toast.success('Booking cancelled successfully');
-        router.push('/dashboard/customer?tab=bookings');
+        // Navigate to appropriate dashboard based on user role
+        const userRole = isProvider ? 'provider' : 'customer';
+        router.push(`/dashboard/${userRole}?tab=bookings`);
       } else {
         throw new Error(response.message || 'Failed to cancel booking');
       }
@@ -160,19 +167,21 @@ export function useBookingDetail(bookingId: string) {
    * Navigate back to bookings list
    */
   const handleBack = () => {
-    router.push('/dashboard/customer?tab=bookings');
+    // Navigate to appropriate dashboard based on user role
+    const userRole = isProvider ? 'provider' : 'customer';
+    router.push(`/dashboard/${userRole}?tab=bookings`);
   };
 
   return {
     // Data
     booking,
     isProvider,
-    
+
     // Loading states
     isLoading,
     isPayingNow,
     isCancelling,
-    
+
     // Actions
     handlePayNow,
     handleCancelBooking,
