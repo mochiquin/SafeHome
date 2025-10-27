@@ -5,6 +5,7 @@ export { BookingLocationInfo } from "./BookingLocationInfo";
 export { BookingContactInfo } from "./BookingContactInfo";
 export { BookingConfirmationCode } from "./BookingConfirmationCode";
 export { BookingProviderInfo } from "./BookingProviderInfo";
+export { BookingPaymentInfo } from "./BookingPaymentInfo";
 export { BookingNotesInfo } from "./BookingNotesInfo";
 export { BookingActions } from "./BookingActions";
 export * from "./constants";

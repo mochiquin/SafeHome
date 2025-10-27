@@ -32,7 +32,8 @@ export const SECTION_TITLES = {
   contact: "Contact",
   confirmation: "Confirmation Code",
   provider: "Provider Information",
-  notes: "Additional Notes"
+  notes: "Additional Notes",
+  payment: "Payment & Pricing"
 };
 
 /**
@@ -101,6 +102,7 @@ export const FIELD_LABELS = {
   providerName: "Provider Name",
   providerEmail: "Provider Email",
   providerQuote: "Provider Quote",
+  paymentStatus: "Payment Status",
   notProvided: "Not provided"
 };
 

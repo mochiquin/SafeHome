@@ -12,6 +12,7 @@ import {
   BookingContactInfo,
   BookingConfirmationCode,
   BookingProviderInfo,
+  BookingPaymentInfo,
   BookingNotesInfo,
   BookingActions
 } from "@/components/dashboard/booking-detail";
@@ -110,6 +111,18 @@ export default function BookingDetailPage() {
               <BookingProviderInfo
                 provider={booking.provider}
                 providerQuote={booking.provider_quote}
+              />
+            </>
+          )}
+
+          {/* Show payment & pricing information to providers */}
+          {isProvider && (booking.budget || booking.provider_quote || booking.payment_status) && (
+            <>
+              <Separator />
+              <BookingPaymentInfo
+                budget={booking.budget}
+                providerQuote={booking.provider_quote}
+                paymentStatus={booking.payment_status}
               />
             </>
           )}
