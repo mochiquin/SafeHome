@@ -35,9 +35,9 @@ def success_response(data=None, message="Success", status_code=status.HTTP_200_O
     return create_response(data=data, message=message, success=True, status_code=status_code)
 
 
-def error_response(message="Error", status_code=status.HTTP_400_BAD_REQUEST):
-    """Create an error response"""
-    return create_response(data=None, message=message, success=False, status_code=status_code)
+def error_response(message="Error", status_code=status.HTTP_400_BAD_REQUEST, data=None):
+    """Create an error response, optionally with details such as validation errors"""
+    return create_response(data=data, message=message, success=False, status_code=status_code)
 
 
 def validation_error_response(errors):

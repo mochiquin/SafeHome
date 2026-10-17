@@ -130,7 +130,7 @@ class Payment(UUIDModel):
         ]
 
     def __str__(self):
-        return f"Payment {self.id} - {self.booking.service.title} - ${self.amount}"
+        return f"Payment {self.id} - {self.booking.get_service_type_display()} - ${self.amount}"
 
     def clean(self):
         """Custom validation"""
