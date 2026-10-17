@@ -57,9 +57,6 @@ def create_stripe_checkout_session(request):
     """
     Create Stripe checkout session for a booking payment
     """
-    print(f"DEBUG PAYMENT: request.user = {request.user}")
-    print(f"DEBUG PAYMENT: request.user.is_authenticated = {request.user.is_authenticated}")
-    print(f"DEBUG PAYMENT: request.COOKIES = {request.COOKIES.keys()}")
     try:
         # Get booking ID from request
         booking_id = request.data.get('booking_id')
@@ -83,17 +80,11 @@ def create_stripe_checkout_session(request):
             )
         
         # Verify the current user is the booking owner (customer)
-        print(f"DEBUG: booking.user.id = {booking.user.id}, booking.user.email = {booking.user.email}")
-        print(f"DEBUG: request.user.id = {request.user.id}, request.user.email = {request.user.email}")
-        print(f"DEBUG: booking.user == request.user: {booking.user == request.user}")
-        print(f"DEBUG: booking.user.id == request.user.id: {booking.user.id == request.user.id}")
-        
-        # TEMPORARILY DISABLED FOR DEBUGGING
-        # if booking.user != request.user:
-        #     return error_response(
-        #         message='Only the booking customer can make payment',
-        #         status_code=status.HTTP_403_FORBIDDEN
-        #     )
+        if booking.user_id != request.user.id:
+            return error_response(
+                message='Only the booking customer can make payment',
+                status_code=status.HTTP_403_FORBIDDEN
+            )
         
         # Calculate amount: use provider_quote if available, otherwise budget
         if booking.provider_quote:

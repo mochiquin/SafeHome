@@ -1,150 +1,61 @@
-#!/usr/bin/env python3
 """
-Test script for encryption utility functionality
+Tests for core.crypto: Fernet encryption at rest and AES-GCM payload decryption.
 """
-import os
-import sys
-import django
-from pathlib import Path
+import pytest
 
-# Add the project root to Python path
-project_root = Path(__file__).resolve().parent.parent
-sys.path.insert(0, str(project_root))
-
-# Set up Django
-os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'safehome.settings')
-django.setup()
-
-from core.crypto import enc, dec
+from core.crypto import dec, dec_aes_gcm, enc
+from tests.conftest import encrypt_payload
 
 
-def test_encryption_roundtrip():
-    """Test that encryption and decryption returns the original string"""
-    print("Testing encryption round-trip functionality...")
-
-    # Test data
-    test_cases = [
-        "Hello, World!",
-        "Sensitive user data: address, phone number",
-        "Payment information: credit card details",
-        "User authentication token",
-        "123456789",
-        "special_chars_!@#$%^&*()",
-        "unicode_测试_中文_🚀",
-        "",  # Empty string
-    ]
-
-    success_count = 0
-
-    for i, test_data in enumerate(test_cases, 1):
-        print(f"\nTest {i}: '{test_data[:50]}...'")
-
-        try:
-            # Encrypt the data
-            encrypted = enc(test_data)
-            print(f"  Encrypted: {encrypted[:50]}...")
-
-            # Decrypt the data
-            decrypted = dec(encrypted)
-            print(f"  Decrypted: '{decrypted}'")
-
-            # Verify round-trip
-            if decrypted == test_data:
-                print("  ✅ PASS: Round-trip successful")
-                success_count += 1
-            else:
-                print(f"  ❌ FAIL: Expected '{test_data}', got '{decrypted}'")
-
-        except Exception as e:
-            print(f"  ❌ ERROR: {str(e)}")
-
-    print(f"\n{'='*50}")
-    print(f"Test Results: {success_count}/{len(test_cases)} passed")
-
-    if success_count == len(test_cases):
-        print("🎉 All encryption tests passed!")
-        return True
-    else:
-        print("❌ Some tests failed!")
-        return False
+@pytest.mark.parametrize('plaintext', [
+    '123 Main Street, Adelaide SA 5000',
+    '+61 400 000 000',
+    'unicode: 北京市 · café',
+    '',
+])
+def test_roundtrip(plaintext):
+    assert dec(enc(plaintext)) == plaintext
 
 
-def test_encryption_errors():
-    """Test error handling in encryption functions"""
-    print("\nTesting error handling...")
-
-    # Test enc() with invalid input
-    try:
-        enc(123)  # Should raise TypeError
-        print("❌ FAIL: enc() should reject non-string input")
-        return False
-    except TypeError:
-        print("✅ PASS: enc() correctly rejects non-string input")
-
-    # Test dec() with invalid input
-    try:
-        dec(123)  # Should raise TypeError
-        print("❌ FAIL: dec() should reject non-string input")
-        return False
-    except TypeError:
-        print("✅ PASS: dec() correctly rejects non-string input")
-
-    # Test dec() with invalid encrypted data
-    try:
-        dec("invalid_encrypted_data")
-        print("❌ FAIL: dec() should reject invalid encrypted data")
-        return False
-    except ValueError:
-        print("✅ PASS: dec() correctly rejects invalid encrypted data")
-
-    return True
+def test_ciphertext_hides_plaintext():
+    ciphertext = enc('secret address')
+    assert 'secret address' not in ciphertext
 
 
-def test_without_fernet_key():
-    """Test behavior when FERNET_KEY is not set"""
-    print("\nTesting without FERNET_KEY...")
-
-    # Save original key
-    original_key = os.environ.get('FERNET_KEY')
-
-    # Remove FERNET_KEY
-    if 'FERNET_KEY' in os.environ:
-        del os.environ['FERNET_KEY']
-
-    try:
-        enc("test")
-        print("❌ FAIL: enc() should require FERNET_KEY")
-        return False
-    except ValueError as e:
-        if "FERNET_KEY environment variable is required" in str(e):
-            print("✅ PASS: enc() correctly requires FERNET_KEY")
-        else:
-            print(f"❌ FAIL: Wrong error message: {e}")
-            return False
-    finally:
-        # Restore original key
-        if original_key:
-            os.environ['FERNET_KEY'] = original_key
-
-    return True
+def test_same_input_gives_different_ciphertext():
+    assert enc('same') != enc('same')
 
 
-if __name__ == '__main__':
-    print("Testing SafeHome Encryption Utility...")
+def test_enc_rejects_non_string():
+    with pytest.raises(TypeError):
+        enc(12345)
 
-    success = True
 
-    # Test 1: Round-trip encryption/decryption
-    success &= test_encryption_roundtrip()
+def test_dec_rejects_tampered_data():
+    with pytest.raises(ValueError):
+        dec('not-valid-ciphertext')
 
-    # Test 2: Error handling
-    success &= test_encryption_errors()
 
-    # Test 3: FERNET_KEY requirement
-    success &= test_without_fernet_key()
+def test_missing_key_is_an_error(monkeypatch):
+    monkeypatch.delenv('FERNET_KEY')
+    with pytest.raises(ValueError, match='FERNET_KEY'):
+        enc('data')
 
-    if success:
-        print("\n🎉 All encryption utility tests passed!")
-    else:
-        print("\n❌ Some tests failed!")
-        sys.exit(1)
+
+def test_wrong_key_cannot_decrypt(monkeypatch):
+    ciphertext = enc('data')
+    monkeypatch.setenv('FERNET_KEY', 'a-different-key')
+    with pytest.raises(ValueError):
+        dec(ciphertext)
+
+
+def test_aes_gcm_payload_from_frontend_decrypts():
+    payload = encrypt_payload({'hello': 'world'})['payload']
+    assert dec_aes_gcm(payload) == '{"hello": "world"}'
+
+
+def test_aes_gcm_rejects_tampered_tag():
+    iv, ciphertext, tag = encrypt_payload({'a': 1})['payload'].split(':')
+    tampered = f'{iv}:{ciphertext}:{"00" * 16}'
+    with pytest.raises(ValueError):
+        dec_aes_gcm(tampered)
