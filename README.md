@@ -1,5 +1,7 @@
 # SafeHome 🏠
 
+[![Backend tests](https://github.com/mochiquin/SafeHome/actions/workflows/backend-tests.yml/badge.svg)](https://github.com/mochiquin/SafeHome/actions/workflows/backend-tests.yml)
+
 A modern home services platform focused on privacy protection and security, providing users with a convenient home service booking experience.
 
 ## 📋 Project Overview
@@ -245,25 +247,20 @@ DJANGO_CORS_ALLOWED_ORIGINS=https://yourdomain.com
 
 ## 🧪 Testing
 
-The project includes a comprehensive test suite:
+The backend has a pytest suite (75 tests) covering encryption, the encrypted
+request parser, registration/login with HttpOnly JWT cookies, booking ownership,
+the Payment model, Stripe checkout and webhook handling (Stripe is mocked),
+and the COVID and services APIs. It runs against in-memory SQLite, so no MySQL
+or Stripe account is needed.
 
 ```bash
-# Encryption functionality tests
-python tests/test_crypto.py
-python tests/test_booking_encryption.py
-
-# API tests
-python tests/test_auth_api.py
-python tests/test_booking_api.py
-python tests/test_services_api.py
-
-# Payment tests
-python tests/test_payment_model.py
-python tests/test_stripe_checkout.py
-
-# COVID functionality tests
-python tests/test_covid_restrictions.py
+cd backend
+pip install -r requirements-dev.txt
+pytest
 ```
+
+The same suite runs on every push and pull request through GitHub Actions
+(`.github/workflows/backend-tests.yml`).
 
 ## 📝 Development Tools
 
